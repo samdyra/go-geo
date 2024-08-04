@@ -6,8 +6,6 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"golang.org/x/time/rate"
-
 	"github.com/samdyra/go-geo/internal/api"
 	"github.com/samdyra/go-geo/internal/config"
 	"github.com/samdyra/go-geo/internal/database"
@@ -19,7 +17,9 @@ func main() {
 	cfg := config.Load()
 	db := database.NewDB(cfg)
 	authService := services.NewAuthService(db)
-	handler := api.NewHandler(authService)
+	articleService := services.NewArticleService(db)
+	authHandler := api.NewHandler(authService)
+	articleHandler := api.NewArticleHandler(articleService)
 
 	r := gin.Default()
 
@@ -33,20 +33,22 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// Rate limiting middleware
-	limiter := middleware.NewIPRateLimiter(rate.Limit(1), 5) // 1 request per second with burst of 5
-	r.Use(middleware.RateLimitMiddleware(limiter))
+	// Auth routes
+	r.POST("/signup", authHandler.SignUp)
+	r.POST("/signin", authHandler.SignIn)
+	r.POST("/logout", authHandler.Logout)
 
-	// Public routes
-	r.POST("/signup", handler.SignUp)
-	r.POST("/signin", handler.SignIn)
-	r.POST("/logout", handler.Logout)
+	// Article routes
+	r.GET("/articles", articleHandler.GetArticles)
+	r.GET("/articles/:id", articleHandler.GetArticle)
 
-	// Protected routes
-	protected := r.Group("/api")
+	// Protected article routes
+	protected := r.Group("/articles")
 	protected.Use(middleware.JWTAuth())
 	{
-		protected.GET("/protected", handler.ProtectedRoute)
+		protected.POST("", articleHandler.CreateArticle)
+		protected.PUT("/:id", articleHandler.UpdateArticle)
+		protected.DELETE("/:id", articleHandler.DeleteArticle)
 	}
 
 	log.Printf("Starting server on :%s", cfg.ServerPort)

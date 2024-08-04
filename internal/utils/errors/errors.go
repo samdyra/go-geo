@@ -9,6 +9,7 @@ var (
     ErrInvalidCredentials = errors.New("invalid credentials")
     ErrInternalServer     = errors.New("internal server error")
     ErrUnauthorized       = errors.New("unauthorized")
+    ErrNotFound           = errors.New("resource not found") // Add this line
 )
 
 type APIError struct {
@@ -28,6 +29,8 @@ func NewAPIError(err error) APIError {
         return APIError{Type: "INVALID_CREDENTIALS", Message: err.Error()}
     case ErrUnauthorized:
         return APIError{Type: "UNAUTHORIZED", Message: err.Error()}
+    case ErrNotFound:
+        return APIError{Type: "NOT_FOUND", Message: err.Error()} // Add this case
     default:
         return APIError{Type: "INTERNAL_SERVER_ERROR", Message: "An unexpected error occurred"}
     }

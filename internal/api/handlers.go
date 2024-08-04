@@ -4,9 +4,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/samdyra/go-geo/internal/auth"
 	"github.com/samdyra/go-geo/internal/models"
 	"github.com/samdyra/go-geo/internal/services"
+	"github.com/samdyra/go-geo/internal/utils/auth"
 	"github.com/samdyra/go-geo/internal/utils/errors"
 )
 

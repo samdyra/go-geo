@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/samdyra/go-geo/internal/utils/auth"
+	"github.com/samdyra/go-geo/internal/utils/errors"
 )
 
 func JWTAuth() gin.HandlerFunc {
@@ -26,7 +27,7 @@ func JWTAuth() gin.HandlerFunc {
 
         userID, err := auth.ValidateToken(parts[1])
         if err != nil {
-            c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+            c.JSON(http.StatusUnauthorized, errors.NewAPIError(errors.ErrUnauthorized))
             c.Abort()
             return
         }
