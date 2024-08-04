@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/samdyra/go-geo/internal/auth"
+	"github.com/samdyra/go-geo/internal/utils/auth"
 )
 
 func JWTAuth() gin.HandlerFunc {

@@ -5,7 +5,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/samdyra/go-geo/internal/auth"
+	"github.com/samdyra/go-geo/internal/models"
 	"github.com/samdyra/go-geo/internal/services"
+	"github.com/samdyra/go-geo/internal/utils/errors"
 )
 
 type Handler struct {
@@ -17,19 +19,20 @@ func NewHandler(authService *services.AuthService) *Handler {
 }
 
 func (h *Handler) SignUp(c *gin.Context) {
-    var input struct {
-        Username string `json:"username" binding:"required"`
-        Password string `json:"password" binding:"required"`
-    }
-
+    var input models.SignUpInput
     if err := c.ShouldBindJSON(&input); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        c.JSON(http.StatusBadRequest, errors.NewAPIError(errors.ErrInvalidInput))
         return
     }
 
-    err := h.authService.CreateUser(input.Username, input.Password)
+    if err := input.Validate(); err != nil {
+        c.JSON(http.StatusBadRequest, errors.NewAPIError(err))
+        return
+    }
+
+    err := h.authService.CreateUser(input)
     if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create user"})
+        c.JSON(http.StatusInternalServerError, errors.NewAPIError(err))
         return
     }
 
@@ -37,25 +40,26 @@ func (h *Handler) SignUp(c *gin.Context) {
 }
 
 func (h *Handler) SignIn(c *gin.Context) {
-    var input struct {
-        Username string `json:"username" binding:"required"`
-        Password string `json:"password" binding:"required"`
-    }
-
+    var input models.SignInInput
     if err := c.ShouldBindJSON(&input); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        c.JSON(http.StatusBadRequest, errors.NewAPIError(errors.ErrInvalidInput))
         return
     }
 
-    user, err := h.authService.ValidateUser(input.Username, input.Password)
+    if err := input.Validate(); err != nil {
+        c.JSON(http.StatusBadRequest, errors.NewAPIError(err))
+        return
+    }
+
+    user, err := h.authService.ValidateUser(input)
     if err != nil {
-        c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+        c.JSON(http.StatusUnauthorized, errors.NewAPIError(err))
         return
     }
 
     token, err := auth.GenerateToken(user.ID)
     if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate token"})
+        c.JSON(http.StatusInternalServerError, errors.NewAPIError(errors.ErrInternalServer))
         return
     }
 
@@ -63,9 +67,6 @@ func (h *Handler) SignIn(c *gin.Context) {
 }
 
 func (h *Handler) Logout(c *gin.Context) {
-    // In a stateless JWT setup, logout is typically handled client-side
-    // by removing the token from storage. Server-side, we can't invalidate
-    // the token, but we can implement a token blacklist if needed.
     c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
 

@@ -1,10 +1,9 @@
 package services
 
 import (
-	"time"
-
 	"github.com/jmoiron/sqlx"
 	"github.com/samdyra/go-geo/internal/models"
+	"github.com/samdyra/go-geo/internal/utils/errors"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -16,29 +15,39 @@ func NewAuthService(db *sqlx.DB) *AuthService {
     return &AuthService{db: db}
 }
 
-func (s *AuthService) CreateUser(username, password string) error {
-    hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+func (s *AuthService) CreateUser(input models.SignUpInput) error {
+    var existingUser models.User
+    err := s.db.Get(&existingUser, "SELECT id FROM users WHERE username = $1", input.Username)
+    if err == nil {
+        return errors.ErrUserAlreadyExists
+    }
+
+    hashedPassword, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
     if err != nil {
-        return err
+        return errors.ErrInternalServer
     }
 
     _, err = s.db.Exec(
-        "INSERT INTO users (username, password, created_at, updated_at) VALUES ($1, $2, $3, $3)",
-        username, string(hashedPassword), time.Now(),
+        "INSERT INTO users (username, password) VALUES ($1, $2)",
+        input.Username, string(hashedPassword),
     )
-    return err
-}
-
-func (s *AuthService) ValidateUser(username, password string) (*models.User, error) {
-    var user models.User
-    err := s.db.Get(&user, "SELECT * FROM users WHERE username = $1", username)
     if err != nil {
-        return nil, err
+        return errors.ErrInternalServer
     }
 
-    err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+    return nil
+}
+
+func (s *AuthService) ValidateUser(input models.SignInInput) (*models.User, error) {
+    var user models.User
+    err := s.db.Get(&user, "SELECT * FROM users WHERE username = $1", input.Username)
     if err != nil {
-        return nil, err
+        return nil, errors.ErrUserNotFound
+    }
+
+    err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(input.Password))
+    if err != nil {
+        return nil, errors.ErrInvalidCredentials
     }
 
     return &user, nil
