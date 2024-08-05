@@ -73,5 +73,16 @@ help:
 	@echo "  make stop-db    - Stop PostgreSQL database"
 	@echo "  make migrate    - Run database migrations"
 
+docs:
+	@echo "Generating API documentation..."
+	@swag init -g ./cmd/server/main.go
+
 # Default target
 all: clean build
+
+docs:
+	swag init -g cmd/server/main.go
+
+
+# Add this to run multiple commands in sequence
+setup: deps install-swag install-lint migrate docs

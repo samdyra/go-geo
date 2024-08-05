@@ -22,6 +22,7 @@ func main() {
 	articleHandler := api.NewArticleHandler(articleService)
 
 	r := gin.Default()
+	r.SetTrustedProxies([]string{"127.0.0.1", "::1"})
 
 	// CORS middleware
 	r.Use(cors.New(cors.Config{
