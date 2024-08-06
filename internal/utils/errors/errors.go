@@ -5,6 +5,7 @@ import "errors"
 var (
     ErrInvalidInput       = errors.New("invalid input")
     ErrUserAlreadyExists  = errors.New("user already exists")
+    ErrResourceAlreadyExists  = errors.New("resource already exists")
     ErrUserNotFound       = errors.New("user not found")
     ErrInvalidCredentials = errors.New("invalid credentials")
     ErrInternalServer     = errors.New("internal server error")
@@ -23,6 +24,8 @@ func NewAPIError(err error) APIError {
         return APIError{Type: "INVALID_INPUT", Message: err.Error()}
     case ErrUserAlreadyExists:
         return APIError{Type: "USER_ALREADY_EXISTS", Message: err.Error()}
+    case ErrResourceAlreadyExists:
+        return APIError{Type: "RESOURCE_ALREADY_EXISTS", Message: err.Error()}
     case ErrUserNotFound:
         return APIError{Type: "USER_NOT_FOUND", Message: err.Error()}
     case ErrInvalidCredentials:

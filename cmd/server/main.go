@@ -20,13 +20,15 @@ func main() {
 	articleService := services.NewArticleService(db)
 	authHandler := api.NewHandler(authService)
 	articleHandler := api.NewArticleHandler(articleService)
+	geoService := services.NewGeoService(db)
+	geoHandler := api.NewGeoHandler(geoService)
 
 	r := gin.Default()
 	r.SetTrustedProxies([]string{"127.0.0.1", "::1"})
 
 	// CORS middleware
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowOrigins:     []string{"http://localhost:5173"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -42,6 +44,10 @@ func main() {
 	// Article routes
 	r.GET("/articles", articleHandler.GetArticles)
 	r.GET("/articles/:id", articleHandler.GetArticle)
+
+	// Geo routes
+	r.POST("/geo/upload", geoHandler.UploadGeoData)
+	r.DELETE("/geo/:table_name", geoHandler.DeleteGeoData)
 
 	// Protected article routes
 	protected := r.Group("/articles")
