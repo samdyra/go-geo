@@ -16,18 +16,25 @@ import (
 func main() {
 	cfg := config.Load()
 	db := database.NewDB(cfg)
+	
 	authService := services.NewAuthService(db)
-	articleService := services.NewArticleService(db)
 	authHandler := api.NewHandler(authService)
+
+	articleService := services.NewArticleService(db)
 	articleHandler := api.NewArticleHandler(articleService)
+
 	geoService := services.NewGeoService(db)
 	geoHandler := api.NewGeoHandler(geoService)
+
+	mvtService := services.NewMVTService(db)
+	mvtHandler := api.NewMVTHandler(mvtService)
 
 	r := gin.Default()
 	r.SetTrustedProxies([]string{"127.0.0.1", "::1"})
 
 	// CORS middleware
 	r.Use(cors.New(cors.Config{
+		// @TODO: Change this to the actual frontend URL from env
 		AllowOrigins:     []string{"http://localhost:5173"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
@@ -42,6 +49,7 @@ func main() {
 	r.POST("/logout", authHandler.Logout)
 	r.GET("/articles", articleHandler.GetArticles)
 	r.GET("/articles/:id", articleHandler.GetArticle)
+	r.GET("/mvt/:table_name/:z/:x/:y", mvtHandler.GetMVT)
 
 	// Protected routes group
 	protected := r.Group("/")
