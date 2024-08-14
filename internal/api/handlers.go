@@ -57,7 +57,7 @@ func (h *Handler) SignIn(c *gin.Context) {
         return
     }
 
-    token, err := auth.GenerateToken(user.ID)
+    token, err := auth.GenerateToken(user.ID, user.Username)
     if err != nil {
         c.JSON(http.StatusInternalServerError, errors.NewAPIError(errors.ErrInternalServer))
         return

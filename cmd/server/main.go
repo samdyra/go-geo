@@ -36,26 +36,29 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// Auth routes
+	// Public routes
 	r.POST("/signup", authHandler.SignUp)
 	r.POST("/signin", authHandler.SignIn)
 	r.POST("/logout", authHandler.Logout)
-
-	// Article routes
 	r.GET("/articles", articleHandler.GetArticles)
 	r.GET("/articles/:id", articleHandler.GetArticle)
 
-	// Geo routes
-	r.POST("/geo/upload", geoHandler.UploadGeoData)
-	r.DELETE("/geo/:table_name", geoHandler.DeleteGeoData)
-
-	// Protected article routes
-	protected := r.Group("/articles")
+	// Protected routes group
+	protected := r.Group("/")
 	protected.Use(middleware.JWTAuth())
 	{
-		protected.POST("", articleHandler.CreateArticle)
-		protected.PUT("/:id", articleHandler.UpdateArticle)
-		protected.DELETE("/:id", articleHandler.DeleteArticle)
+		articles := protected.Group("articles")
+		{
+			articles.POST("", articleHandler.CreateArticle)
+			articles.PUT("/:id", articleHandler.UpdateArticle)
+			articles.DELETE("/:id", articleHandler.DeleteArticle)
+		}
+
+		geo := protected.Group("geo")
+		{
+			geo.POST("/upload", geoHandler.UploadGeoData)
+			geo.DELETE("/:table_name", geoHandler.DeleteGeoData)
+		}
 	}
 
 	log.Printf("Starting server on :%s", cfg.ServerPort)

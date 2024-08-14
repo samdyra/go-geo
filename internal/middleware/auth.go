@@ -25,7 +25,7 @@ func JWTAuth() gin.HandlerFunc {
             return
         }
 
-        userID, err := auth.ValidateToken(parts[1])
+        userID, username, err := auth.ValidateToken(parts[1])
         if err != nil {
             c.JSON(http.StatusUnauthorized, errors.NewAPIError(errors.ErrUnauthorized))
             c.Abort()
@@ -33,6 +33,7 @@ func JWTAuth() gin.HandlerFunc {
         }
 
         c.Set("user_id", userID)
+        c.Set("username", username)
         c.Next()
     }
 }

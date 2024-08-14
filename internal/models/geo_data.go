@@ -10,6 +10,9 @@ type GeoDataList struct {
     Coordinate  *string    `db:"coordinate" json:"coordinate,omitempty"`
     Type        string     `db:"type" json:"type"`
     CreatedAt   time.Time  `db:"created_at" json:"created_at"`
+    UpdatedAt   time.Time  `db:"updated_at" json:"updated_at"`
+    CreatedBy   string     `db:"created_by" json:"created_by"`
+    UpdatedBy   string     `db:"updated_by" json:"updated_by"`
 }
 
 type GeoDataUpload struct {
