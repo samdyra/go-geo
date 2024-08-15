@@ -1,6 +1,7 @@
 package api
 
 import (
+	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -82,7 +83,7 @@ func (h *GeoHandler) DeleteGeoData(c *gin.Context) {
 
 func (h *GeoHandler) EditGeoData(c *gin.Context) {
     var input models.GeoDataEdit
-    if err := c.ShouldBindJSON(&input); err != nil {
+    if err := c.ShouldBind(&input); err != nil {
         c.JSON(http.StatusBadRequest, errors.NewAPIError(errors.ErrInvalidInput))
         return
     }
@@ -90,7 +91,26 @@ func (h *GeoHandler) EditGeoData(c *gin.Context) {
     oldTableName := c.Param("table_name")
     username, _ := c.Get("username")
 
-    err := h.geoService.EditGeoData(oldTableName, input, username.(string))
+    var file io.Reader
+    if input.TableName != nil {
+        uploadedFile, err := c.FormFile("file")
+        if err != nil {
+            c.JSON(http.StatusBadRequest, errors.NewAPIError(errors.ErrInvalidInput))
+            return
+        }
+        openedFile, err := uploadedFile.Open()
+        if err != nil {
+            c.JSON(http.StatusInternalServerError, errors.NewAPIError(errors.ErrInternalServer))
+            return
+        }
+        defer openedFile.Close()
+        file = openedFile
+    } else if _, err := c.FormFile("file"); err == nil {
+        c.JSON(http.StatusBadRequest, errors.NewAPIError(errors.ErrInvalidInput))
+        return
+    }
+
+    err := h.geoService.EditGeoData(oldTableName, input, file, username.(string))
     if err != nil {
         switch err {
         case errors.ErrNotFound:

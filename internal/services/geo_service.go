@@ -227,7 +227,7 @@ func (s *GeoService) DeleteGeoData(tableName string) error {
     return tx.Commit()
 }
 
-func (s *GeoService) EditGeoData(oldTableName string, data models.GeoDataEdit, username string) error {
+func (s *GeoService) EditGeoData(oldTableName string, data models.GeoDataEdit, file io.Reader, username string) error {
     tx, err := s.db.Beginx()
     if err != nil {
         return errors.ErrInternalServer
@@ -238,12 +238,6 @@ func (s *GeoService) EditGeoData(oldTableName string, data models.GeoDataEdit, u
     query := "UPDATE geo_data_list SET updated_at = $1, updated_by = $2"
     params := []interface{}{time.Now(), username}
     paramCount := 3
-
-    if data.TableName != nil {
-        query += fmt.Sprintf(", table_name = $%d", paramCount)
-        params = append(params, *data.TableName)
-        paramCount++
-    }
 
     if data.Type != nil {
         query += fmt.Sprintf(", type = $%d", paramCount)
@@ -283,8 +277,8 @@ func (s *GeoService) EditGeoData(oldTableName string, data models.GeoDataEdit, u
         return errors.ErrNotFound
     }
 
-    // If table name was changed, rename the actual spatial data table
-    if data.TableName != nil && *data.TableName != oldTableName {
+    // If table name was changed and file is provided, rename the table and update its contents
+    if data.TableName != nil && *data.TableName != oldTableName && file != nil {
         // Check if the new table name already exists
         var exists bool
         err = tx.Get(&exists, "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)", *data.TableName)
@@ -293,7 +287,7 @@ func (s *GeoService) EditGeoData(oldTableName string, data models.GeoDataEdit, u
             return errors.ErrInternalServer
         }
         if exists {
-            return errors.ErrResourceAlreadyExists
+            return errors.ErrTableAlreadyExists
         }
 
         // Rename the spatial data table
@@ -304,6 +298,46 @@ func (s *GeoService) EditGeoData(oldTableName string, data models.GeoDataEdit, u
         }
 
         log.Printf("Renamed spatial data table from %s to %s", oldTableName, *data.TableName)
+
+        // Clear existing data from the renamed table
+        _, err = tx.Exec(fmt.Sprintf("TRUNCATE TABLE %s", *data.TableName))
+        if err != nil {
+            log.Printf("Error clearing data from table %s: %v", *data.TableName, err)
+            return errors.ErrInternalServer
+        }
+
+        // Read and parse the new GeoJSON file
+        fileBytes, err := io.ReadAll(file)
+        if err != nil {
+            return errors.ErrInvalidInput
+        }
+
+        fc, err := geojson.UnmarshalFeatureCollection(fileBytes)
+        if err != nil {
+            return errors.ErrInvalidInput
+        }
+
+        // Insert new features into the renamed table
+        for _, feature := range fc.Features {
+            geom := feature.Geometry
+            properties, err := json.Marshal(feature.Properties)
+            if err != nil {
+                return errors.ErrInternalServer
+            }
+
+            wkbData, err := wkb.Marshal(geom)
+            if err != nil {
+                return errors.ErrInternalServer
+            }
+
+            _, err = tx.Exec(fmt.Sprintf(`
+                INSERT INTO %s (geom, properties, created_by, updated_by)
+                VALUES (ST_GeomFromWKB($1, 4326), $2, $3, $4)
+            `, *data.TableName), wkbData, properties, username, username)
+            if err != nil {
+                return errors.ErrInternalServer
+            }
+        }
     }
 
     err = tx.Commit()
