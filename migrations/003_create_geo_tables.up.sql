@@ -4,10 +4,12 @@ CREATE TABLE IF NOT EXISTS geo_data_list (
     table_name VARCHAR(255) NOT NULL UNIQUE,
     coordinate POINT,
     type VARCHAR(50) NOT NULL,
+    color VARCHAR(7) NOT NULL DEFAULT '#000000',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     created_by VARCHAR(255) NOT NULL,
-    updated_by VARCHAR(255) NOT NULL
+    updated_by VARCHAR(255) NOT NULL,
+    CONSTRAINT check_type CHECK (type IN ('POINT', 'LINESTRING', 'POLYGON'))
 );
 
 -- Create an index on the table_name for faster lookups

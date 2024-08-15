@@ -43,10 +43,27 @@ func (s *GeoService) CreateGeoData(data models.GeoDataUpload, file io.Reader, us
 
     // Insert into geo_data_list
     _, err = tx.Exec(`
-        INSERT INTO geo_data_list (table_name, coordinate, type, created_at, updated_at, created_by, updated_by)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-    `, data.TableName, data.Coordinate, data.Type, now, now, username, username)
+        INSERT INTO geo_data_list (table_name, coordinate, type, color, created_at, updated_at, created_by, updated_by)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `, data.TableName, data.Coordinate, data.Type, data.Color, now, now, username, username)
     if err != nil {
+        return errors.ErrInternalServer
+    }
+
+    // Create new table for the geo data
+    _, err = tx.Exec(fmt.Sprintf(`
+    CREATE TABLE IF NOT EXISTS %s (
+        id SERIAL PRIMARY KEY,
+        geom GEOMETRY,
+        properties JSONB,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        created_by VARCHAR(255),
+        updated_by VARCHAR(255)
+    )
+    `, data.TableName))
+    if err != nil {
+        log.Printf("Error creating table %s: %v", data.TableName, err)
         return errors.ErrInternalServer
     }
 
