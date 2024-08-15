@@ -79,3 +79,29 @@ func (h *GeoHandler) DeleteGeoData(c *gin.Context) {
 
     c.JSON(http.StatusOK, gin.H{"message": "Geo data deleted successfully"})
 }
+
+func (h *GeoHandler) EditGeoData(c *gin.Context) {
+    var input models.GeoDataEdit
+    if err := c.ShouldBindJSON(&input); err != nil {
+        c.JSON(http.StatusBadRequest, errors.NewAPIError(errors.ErrInvalidInput))
+        return
+    }
+
+    oldTableName := c.Param("table_name")
+    username, _ := c.Get("username")
+
+    err := h.geoService.EditGeoData(oldTableName, input, username.(string))
+    if err != nil {
+        switch err {
+        case errors.ErrNotFound:
+            c.JSON(http.StatusNotFound, errors.NewAPIError(err))
+        case errors.ErrInvalidInput:
+            c.JSON(http.StatusBadRequest, errors.NewAPIError(err))
+        default:
+            c.JSON(http.StatusInternalServerError, errors.NewAPIError(err))
+        }
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"message": "Geo data updated successfully"})
+}

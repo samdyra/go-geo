@@ -226,3 +226,91 @@ func (s *GeoService) DeleteGeoData(tableName string) error {
 
     return tx.Commit()
 }
+
+func (s *GeoService) EditGeoData(oldTableName string, data models.GeoDataEdit, username string) error {
+    tx, err := s.db.Beginx()
+    if err != nil {
+        return errors.ErrInternalServer
+    }
+    defer tx.Rollback()
+
+    // Prepare the update query for geo_data_list
+    query := "UPDATE geo_data_list SET updated_at = $1, updated_by = $2"
+    params := []interface{}{time.Now(), username}
+    paramCount := 3
+
+    if data.TableName != nil {
+        query += fmt.Sprintf(", table_name = $%d", paramCount)
+        params = append(params, *data.TableName)
+        paramCount++
+    }
+
+    if data.Type != nil {
+        query += fmt.Sprintf(", type = $%d", paramCount)
+        params = append(params, *data.Type)
+        paramCount++
+    }
+
+    if data.Color != nil {
+        query += fmt.Sprintf(", color = $%d", paramCount)
+        params = append(params, *data.Color)
+        paramCount++
+    }
+
+    if len(data.Coordinate) > 0 {
+        query += fmt.Sprintf(", coordinate = $%d", paramCount)
+        params = append(params, pq.Array(data.Coordinate))
+        paramCount++
+    }
+
+    query += " WHERE table_name = $" + fmt.Sprintf("%d", paramCount)
+    params = append(params, oldTableName)
+
+    // Execute the update on geo_data_list
+    result, err := tx.Exec(query, params...)
+    if err != nil {
+        log.Printf("Error updating geo_data_list: %v", err)
+        return errors.ErrInternalServer
+    }
+
+    rowsAffected, err := result.RowsAffected()
+    if err != nil {
+        log.Printf("Error getting rows affected: %v", err)
+        return errors.ErrInternalServer
+    }
+
+    if rowsAffected == 0 {
+        return errors.ErrNotFound
+    }
+
+    // If table name was changed, rename the actual spatial data table
+    if data.TableName != nil && *data.TableName != oldTableName {
+        // Check if the new table name already exists
+        var exists bool
+        err = tx.Get(&exists, "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)", *data.TableName)
+        if err != nil {
+            log.Printf("Error checking if new table name exists: %v", err)
+            return errors.ErrInternalServer
+        }
+        if exists {
+            return errors.ErrResourceAlreadyExists
+        }
+
+        // Rename the spatial data table
+        _, err = tx.Exec(fmt.Sprintf("ALTER TABLE %s RENAME TO %s", oldTableName, *data.TableName))
+        if err != nil {
+            log.Printf("Error renaming table from %s to %s: %v", oldTableName, *data.TableName, err)
+            return errors.ErrInternalServer
+        }
+
+        log.Printf("Renamed spatial data table from %s to %s", oldTableName, *data.TableName)
+    }
+
+    err = tx.Commit()
+    if err != nil {
+        log.Printf("Error committing transaction: %v", err)
+        return errors.ErrInternalServer
+    }
+
+    return nil
+}

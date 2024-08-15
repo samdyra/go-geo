@@ -22,3 +22,10 @@ type GeoDataUpload struct {
     Color       string  `form:"color" binding:"required,hexcolor"`
     Coordinate  []string `form:"coordinate" binding:"required,len=2"`
 }
+
+type GeoDataEdit struct {
+    TableName   *string   `json:"table_name,omitempty"`
+    Type        *string   `json:"type,omitempty"`
+    Color       *string   `json:"color,omitempty"`
+    Coordinate  []string  `json:"coordinate,omitempty"`
+}

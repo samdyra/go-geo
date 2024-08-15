@@ -67,6 +67,7 @@ func main() {
 		{
 			geo.POST("/upload", geoHandler.UploadGeoData)
 			geo.DELETE("/:table_name", geoHandler.DeleteGeoData)
+			geo.PUT("/:table_name", geoHandler.EditGeoData)
 		}
 	}
 
