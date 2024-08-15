@@ -50,6 +50,7 @@ func main() {
 	r.GET("/articles", articleHandler.GetArticles)
 	r.GET("/articles/:id", articleHandler.GetArticle)
 	r.GET("/mvt/:table_name/:z/:x/:y", mvtHandler.GetMVT)
+	r.GET("/geo-data-list", geoHandler.GetGeoDataList)
 
 	// Protected routes group
 	protected := r.Group("/")

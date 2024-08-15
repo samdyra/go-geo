@@ -17,6 +17,15 @@ func NewGeoHandler(geoService *services.GeoService) *GeoHandler {
     return &GeoHandler{geoService: geoService}
 }
 
+func (h *GeoHandler) GetGeoDataList(c *gin.Context) {
+    formattedData, err := h.geoService.GetFormattedGeoData()
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, errors.NewAPIError(err))
+        return
+    }
+
+    c.JSON(http.StatusOK, formattedData)
+}
 
 func (h *GeoHandler) UploadGeoData(c *gin.Context) {
     var input models.GeoDataUpload
@@ -27,6 +36,11 @@ func (h *GeoHandler) UploadGeoData(c *gin.Context) {
 
     file, err := c.FormFile("file")
     if err != nil {
+        c.JSON(http.StatusBadRequest, errors.NewAPIError(errors.ErrInvalidInput))
+        return
+    }
+    
+    if len(input.Coordinate) != 2 {
         c.JSON(http.StatusBadRequest, errors.NewAPIError(errors.ErrInvalidInput))
         return
     }

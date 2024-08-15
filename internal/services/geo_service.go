@@ -8,9 +8,11 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
 	"github.com/paulmach/orb/encoding/wkb"
 	"github.com/paulmach/orb/geojson"
 	"github.com/samdyra/go-geo/internal/models"
+	"github.com/samdyra/go-geo/internal/utils"
 	"github.com/samdyra/go-geo/internal/utils/errors"
 )
 
@@ -21,6 +23,89 @@ type GeoService struct {
 func NewGeoService(db *sqlx.DB) *GeoService {
     return &GeoService{db: db}
 }
+
+type FormattedGeoData struct {
+	Name       string          `json:"name"`
+	Coordinate []float64       `json:"coordinate"`
+	Layer      json.RawMessage `json:"layer"`
+}
+
+func (s *GeoService) GetFormattedGeoData() ([]FormattedGeoData, error) {
+	log.Println("Starting GetFormattedGeoData")
+	
+	query := `SELECT table_name, type, color, coordinate FROM geo_data_list`
+	log.Printf("Executing query: %s", query)
+	
+	rows, err := s.db.Query(query)
+	if err != nil {
+		log.Printf("Error executing query: %v", err)
+		return nil, errors.ErrInternalServer
+	}
+	defer rows.Close()
+
+	log.Println("Query executed successfully")
+
+	var result []FormattedGeoData
+	for rows.Next() {
+		var tableName, dataType, color string
+		var coordinateStr []string
+		err := rows.Scan(&tableName, &dataType, &color, pq.Array(&coordinateStr))
+		if err != nil {
+			log.Printf("Error scanning row: %v", err)
+			return nil, errors.ErrInternalServer
+		}
+		log.Printf("Scanned row: table_name=%s, type=%s, color=%s, coordinate=%v", tableName, dataType, color, coordinateStr)
+
+		coordinate, err := utils.ParseCoordinate(coordinateStr)
+		if err != nil {
+			log.Printf("Error parsing coordinate: %v", err)
+			return nil, errors.ErrInvalidInput
+		}
+		log.Printf("Parsed coordinate: %v", coordinate)
+
+		layerType := utils.GetLayerType(dataType)
+		paint := utils.GetPaint(dataType, color)
+
+		layer := map[string]interface{}{
+			"id": tableName,
+			"source": map[string]interface{}{
+				"type":  "vector",
+				"tiles": fmt.Sprintf("http://localhost:8080/mvt/%s/{z}/{x}/{y}", tableName),
+			},
+			"source-layer": tableName,
+			"type":         layerType,
+			"paint":        paint,
+		}
+
+		layerJSON, err := json.Marshal(layer)
+		if err != nil {
+			log.Printf("Error marshaling layer to JSON: %v", err)
+			return nil, errors.ErrInternalServer
+		}
+
+		result = append(result, FormattedGeoData{
+			Name:       utils.FormatTableName(tableName),
+			Coordinate: coordinate,
+			Layer:      layerJSON,
+		})
+		log.Printf("Added formatted data for table: %s", tableName)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("Error after iterating rows: %v", err)
+		return nil, errors.ErrInternalServer
+	}
+
+	if len(result) == 0 {
+		log.Println("No results found")
+		return nil, errors.ErrNotFound
+	}
+
+	log.Printf("Returning %d formatted geo data entries", len(result))
+	return result, nil
+}
+
+
 
 func (s *GeoService) CreateGeoData(data models.GeoDataUpload, file io.Reader, username string) error {
     tx, err := s.db.Beginx()
@@ -45,7 +130,7 @@ func (s *GeoService) CreateGeoData(data models.GeoDataUpload, file io.Reader, us
     _, err = tx.Exec(`
         INSERT INTO geo_data_list (table_name, coordinate, type, color, created_at, updated_at, created_by, updated_by)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-    `, data.TableName, data.Coordinate, data.Type, data.Color, now, now, username, username)
+    `, data.TableName, pq.Array(data.Coordinate), data.Type, data.Color, now, now, username, username)
     if err != nil {
         return errors.ErrInternalServer
     }
@@ -63,7 +148,6 @@ func (s *GeoService) CreateGeoData(data models.GeoDataUpload, file io.Reader, us
     )
     `, data.TableName))
     if err != nil {
-        log.Printf("Error creating table %s: %v", data.TableName, err)
         return errors.ErrInternalServer
     }
 
@@ -80,7 +164,6 @@ func (s *GeoService) CreateGeoData(data models.GeoDataUpload, file io.Reader, us
     )
     `, data.TableName))
     if err != nil {
-        log.Printf("Error creating table %s: %v", data.TableName, err)
         return errors.ErrInternalServer
     }
 
