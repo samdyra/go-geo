@@ -1,20 +1,19 @@
-package api
+package article
 
 import (
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/samdyra/go-geo/internal/models"
-	"github.com/samdyra/go-geo/internal/services"
+
 	"github.com/samdyra/go-geo/internal/utils/errors"
 )
 
 type ArticleHandler struct {
-	articleService *services.ArticleService
+	articleService *ArticleService
 }
 
-func NewArticleHandler(articleService *services.ArticleService) *ArticleHandler {
+func NewArticleHandler(articleService *ArticleService) *ArticleHandler {
 	return &ArticleHandler{articleService: articleService}
 }
 
@@ -43,7 +42,7 @@ func (h *ArticleHandler) GetArticle(c *gin.Context) {
 }
 
 func (h *ArticleHandler) CreateArticle(c *gin.Context) {
-    var input models.CreateArticleInput
+    var input CreateArticleInput
     if err := c.ShouldBindJSON(&input); err != nil {
         c.JSON(http.StatusBadRequest, errors.NewAPIError(errors.ErrInvalidInput))
         return
@@ -82,7 +81,7 @@ func (h *ArticleHandler) UpdateArticle(c *gin.Context) {
 		return
 	}
 
-	var input models.UpdateArticleInput
+	var input UpdateArticleInput
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, errors.NewAPIError(errors.ErrInvalidInput))
 		return

@@ -1,8 +1,8 @@
-package services
+package user
 
 import (
 	"github.com/jmoiron/sqlx"
-	"github.com/samdyra/go-geo/internal/models"
+
 	"github.com/samdyra/go-geo/internal/utils/errors"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -15,8 +15,8 @@ func NewAuthService(db *sqlx.DB) *AuthService {
     return &AuthService{db: db}
 }
 
-func (s *AuthService) CreateUser(input models.SignUpInput) error {
-    var existingUser models.User
+func (s *AuthService) CreateUser(input SignUpInput) error {
+    var existingUser User
     err := s.db.Get(&existingUser, "SELECT id FROM users WHERE username = $1", input.Username)
     if err == nil {
         return errors.ErrUserAlreadyExists
@@ -38,8 +38,8 @@ func (s *AuthService) CreateUser(input models.SignUpInput) error {
     return nil
 }
 
-func (s *AuthService) ValidateUser(input models.SignInInput) (*models.User, error) {
-    var user models.User
+func (s *AuthService) ValidateUser(input SignInInput) (*User, error) {
+    var user User
     err := s.db.Get(&user, "SELECT * FROM users WHERE username = $1", input.Username)
     if err != nil {
         return nil, errors.ErrUserNotFound

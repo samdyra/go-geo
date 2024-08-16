@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS data (
+CREATE TABLE IF NOT EXISTS spatial_data (
     id SERIAL PRIMARY KEY,
     table_name VARCHAR(50) NOT NULL,
     type VARCHAR(50) NOT NULL,

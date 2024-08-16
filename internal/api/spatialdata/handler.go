@@ -1,35 +1,23 @@
-package api
+package spatialdata
 
 import (
 	"io"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/samdyra/go-geo/internal/models"
-	"github.com/samdyra/go-geo/internal/services"
 	"github.com/samdyra/go-geo/internal/utils/errors"
 )
 
-type GeoHandler struct {
-    geoService *services.GeoService
+type SpatialDataHandler struct {
+    spatialDataService *SpatialDataService
 }
 
-func NewGeoHandler(geoService *services.GeoService) *GeoHandler {
-    return &GeoHandler{geoService: geoService}
+func NewSpatialDataHandler(spatialDataService *SpatialDataService) *SpatialDataHandler {
+    return &SpatialDataHandler{spatialDataService: spatialDataService}
 }
 
-func (h *GeoHandler) GetGeoDataList(c *gin.Context) {
-    formattedData, err := h.geoService.GetFormattedGeoData()
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, errors.NewAPIError(err))
-        return
-    }
-
-    c.JSON(http.StatusOK, formattedData)
-}
-
-func (h *GeoHandler) UploadGeoData(c *gin.Context) {
-    var input models.GeoDataUpload
+func (h *SpatialDataHandler) CreateSpatialData(c *gin.Context) {
+    var input SpatialDataCreate
     if err := c.ShouldBind(&input); err != nil {
         c.JSON(http.StatusBadRequest, errors.NewAPIError(errors.ErrInvalidInput))
         return
@@ -37,11 +25,6 @@ func (h *GeoHandler) UploadGeoData(c *gin.Context) {
 
     file, err := c.FormFile("file")
     if err != nil {
-        c.JSON(http.StatusBadRequest, errors.NewAPIError(errors.ErrInvalidInput))
-        return
-    }
-    
-    if len(input.Coordinate) != 2 {
         c.JSON(http.StatusBadRequest, errors.NewAPIError(errors.ErrInvalidInput))
         return
     }
@@ -59,30 +42,44 @@ func (h *GeoHandler) UploadGeoData(c *gin.Context) {
         return
     }
 
-    err = h.geoService.CreateGeoData(input, openedFile, username.(string))
+    err = h.spatialDataService.CreateSpatialData(input, openedFile, username.(string))
     if err != nil {
         c.JSON(http.StatusInternalServerError, errors.NewAPIError(err))
         return
     }
 
-    c.JSON(http.StatusCreated, gin.H{"message": "Geo data uploaded successfully"})
+    c.JSON(http.StatusCreated, gin.H{"message": "Spatial data created successfully"})
 }
 
+func (h *SpatialDataHandler) GetSpatialDataList(c *gin.Context) {
+    spatialDataList, err := h.spatialDataService.GetSpatialDataList()
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, errors.NewAPIError(err))
+        return
+    }
 
-func (h *GeoHandler) DeleteGeoData(c *gin.Context) {
+    c.JSON(http.StatusOK, spatialDataList)
+}
+
+func (h *SpatialDataHandler) DeleteSpatialData(c *gin.Context) {
     tableName := c.Param("table_name")
 
-    err := h.geoService.DeleteGeoData(tableName)
+    err := h.spatialDataService.DeleteSpatialData(tableName)
     if err != nil {
-        c.JSON(http.StatusInternalServerError, errors.NewAPIError(err))
+        switch err {
+        case errors.ErrNotFound:
+            c.JSON(http.StatusNotFound, errors.NewAPIError(err))
+        default:
+            c.JSON(http.StatusInternalServerError, errors.NewAPIError(err))
+        }
         return
     }
 
-    c.JSON(http.StatusOK, gin.H{"message": "Geo data deleted successfully"})
+    c.JSON(http.StatusOK, gin.H{"message": "Spatial data deleted successfully"})
 }
 
-func (h *GeoHandler) EditGeoData(c *gin.Context) {
-    var input models.GeoDataEdit
+func (h *SpatialDataHandler) EditSpatialData(c *gin.Context) {
+    var input SpatialDataEdit
     if err := c.ShouldBind(&input); err != nil {
         c.JSON(http.StatusBadRequest, errors.NewAPIError(errors.ErrInvalidInput))
         return
@@ -92,12 +89,8 @@ func (h *GeoHandler) EditGeoData(c *gin.Context) {
     username, _ := c.Get("username")
 
     var file io.Reader
-    if input.TableName != nil {
-        uploadedFile, err := c.FormFile("file")
-        if err != nil {
-            c.JSON(http.StatusBadRequest, errors.NewAPIError(errors.ErrInvalidInput))
-            return
-        }
+    uploadedFile, err := c.FormFile("file")
+    if err == nil {
         openedFile, err := uploadedFile.Open()
         if err != nil {
             c.JSON(http.StatusInternalServerError, errors.NewAPIError(errors.ErrInternalServer))
@@ -105,12 +98,9 @@ func (h *GeoHandler) EditGeoData(c *gin.Context) {
         }
         defer openedFile.Close()
         file = openedFile
-    } else if _, err := c.FormFile("file"); err == nil {
-        c.JSON(http.StatusBadRequest, errors.NewAPIError(errors.ErrInvalidInput))
-        return
     }
 
-    err := h.geoService.EditGeoData(oldTableName, input, file, username.(string))
+    err = h.spatialDataService.EditSpatialData(oldTableName, input, file, username.(string))
     if err != nil {
         switch err {
         case errors.ErrNotFound:
@@ -123,5 +113,5 @@ func (h *GeoHandler) EditGeoData(c *gin.Context) {
         return
     }
 
-    c.JSON(http.StatusOK, gin.H{"message": "Geo data updated successfully"})
+    c.JSON(http.StatusOK, gin.H{"message": "Spatial data updated successfully"})
 }
