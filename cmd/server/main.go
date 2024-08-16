@@ -6,28 +6,34 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/samdyra/go-geo/internal/api"
+	"github.com/samdyra/go-geo/internal/api/article"
+	"github.com/samdyra/go-geo/internal/api/layergroup"
+	"github.com/samdyra/go-geo/internal/api/mvt"
+	"github.com/samdyra/go-geo/internal/api/spatialdata"
+	"github.com/samdyra/go-geo/internal/api/user"
 	"github.com/samdyra/go-geo/internal/config"
 	"github.com/samdyra/go-geo/internal/database"
 	"github.com/samdyra/go-geo/internal/middleware"
-	"github.com/samdyra/go-geo/internal/services"
 )
 
 func main() {
 	cfg := config.Load()
 	db := database.NewDB(cfg)
 	
-	authService := services.NewAuthService(db)
-	authHandler := api.NewHandler(authService)
+	authService := user.NewAuthService(db)
+	authHandler := user.NewHandler(authService)
 
-	articleService := services.NewArticleService(db)
-	articleHandler := api.NewArticleHandler(articleService)
+	articleService := article.NewArticleService(db)
+	articleHandler := article.NewArticleHandler(articleService)
 
-	geoService := services.NewGeoService(db)
-	geoHandler := api.NewGeoHandler(geoService)
+	spatialDataService := spatialdata.NewSpatialDataService(db)
+	spatialDataHandler := spatialdata.NewSpatialDataHandler(spatialDataService)
 
-	mvtService := services.NewMVTService(db)
-	mvtHandler := api.NewMVTHandler(mvtService)
+	layerGroupService := layergroup.NewService(db)
+	layerGroupHandler := layergroup.NewHandler(layerGroupService)
+
+	mvtService := mvt.NewMVTService(db)
+	mvtHandler := mvt.NewMVTHandler(mvtService)
 
 	r := gin.Default()
 	r.SetTrustedProxies([]string{"127.0.0.1", "::1"})
@@ -50,7 +56,8 @@ func main() {
 	r.GET("/articles", articleHandler.GetArticles)
 	r.GET("/articles/:id", articleHandler.GetArticle)
 	r.GET("/mvt/:table_name/:z/:x/:y", mvtHandler.GetMVT)
-	r.GET("/geo-data-list", geoHandler.GetGeoDataList)
+	r.GET("/spatial-data", spatialDataHandler.GetSpatialDataList)
+	r.GET("/layer-groups", layerGroupHandler.GetGroupsWithLayers)
 
 	// Protected routes group
 	protected := r.Group("/")
@@ -63,11 +70,18 @@ func main() {
 			articles.DELETE("/:id", articleHandler.DeleteArticle)
 		}
 
-		geo := protected.Group("geo")
+		spatialData := protected.Group("spatial-data")
 		{
-			geo.POST("/upload", geoHandler.UploadGeoData)
-			geo.DELETE("/:table_name", geoHandler.DeleteGeoData)
-			geo.PUT("/:table_name", geoHandler.EditGeoData)
+			spatialData.POST("", spatialDataHandler.CreateSpatialData)
+			spatialData.DELETE("/:table_name", spatialDataHandler.DeleteSpatialData)
+			spatialData.PUT("/:table_name", spatialDataHandler.EditSpatialData)
+		}
+
+		layerGroups := protected.Group("layer-groups")
+		{
+			layerGroups.POST("", layerGroupHandler.CreateGroup)
+			layerGroups.POST("/add-layer", layerGroupHandler.AddLayerToGroup)
+			layerGroups.DELETE("/remove-layer", layerGroupHandler.RemoveLayerFromGroup)
 		}
 	}
 
