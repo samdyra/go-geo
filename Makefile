@@ -57,9 +57,13 @@ stop-db:
 	@docker rm $(POSTGRES_CONTAINER)
 
 # Run database migrations (requires golang-migrate)
-migrate:
+migrate-up:
 	@echo "Running database migrations..."
-	@migrate -path $(PWD)/migrations -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable" up
+	@migrate -path $(PWD)/migrations/up -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable" up
+
+migrate-down:
+	@echo "Running database migrations..."
+	@migrate -path $(PWD)/migrations/down -database "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable" down
 
 # Help command
 help:
