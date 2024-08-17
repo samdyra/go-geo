@@ -31,64 +31,6 @@ func (s *Service) CreateLayer(layer LayerCreate, userID int64) error {
     return nil
 }
 
-func (s *Service) GetFormattedLayers() ([]FormattedLayer, error) {
-    query := `SELECT l.id, l.layer_name, l.coordinate, l.color, sd.table_name, sd.type 
-              FROM layer l
-              JOIN spatial_data sd ON l.spatial_data_id = sd.id`
-    
-    rows, err := s.db.Query(query)
-    if err != nil {
-        return nil, errors.ErrInternalServer
-    }
-    defer rows.Close()
-
-    var result []FormattedLayer
-    for rows.Next() {
-        var id int64
-        var layerName, color, tableName, dataType string
-        var coordinate []float64
-        err := rows.Scan(&id, &layerName, &coordinate, &color, &tableName, &dataType)
-        if err != nil {
-            return nil, errors.ErrInternalServer
-        }
-
-        layerType := utils.GetLayerType(dataType)
-        paint := utils.GetPaint(dataType, color)
-
-        layer := map[string]interface{}{
-            "id": tableName,
-            "source": map[string]interface{}{
-                "type":  "vector",
-                "tiles": fmt.Sprintf("http://localhost:8080/mvt/%s/{z}/{x}/{y}", tableName),
-            },
-            "source-layer": tableName,
-            "type":         layerType,
-            "paint":        paint,
-        }
-
-        layerJSON, err := json.Marshal(layer)
-        if err != nil {
-            return nil, errors.ErrInternalServer
-        }
-
-        result = append(result, FormattedLayer{
-            ID:         id,
-            LayerName:  layerName,
-            Coordinate: coordinate,
-            Layer:      layerJSON,
-        })
-    }
-
-    if err = rows.Err(); err != nil {
-        return nil, errors.ErrInternalServer
-    }
-
-    if len(result) == 0 {
-        return nil, errors.ErrNotFound
-    }
-
-    return result, nil
-}
 
 func (s *Service) UpdateLayer(id int64, update LayerUpdate, userID int64) error {
     query := "UPDATE layer SET updated_at = $1, updated_by = $2"
@@ -158,4 +100,82 @@ func (s *Service) DeleteLayer(id int64) error {
     }
 
     return tx.Commit()
+}
+
+func (s *Service) GetAllFormattedLayers() ([]FormattedLayer, error) {
+    query := `SELECT l.id, l.layer_name, l.coordinate, l.color, sd.table_name, sd.type 
+              FROM layer l
+              JOIN spatial_data sd ON l.spatial_data_id = sd.id`
+    
+    return s.queryFormattedLayers(query)
+}
+
+func (s *Service) GetFormattedLayers(ids []int64) ([]FormattedLayer, error) {
+    query := `SELECT l.id, l.layer_name, l.coordinate, l.color, sd.table_name, sd.type 
+              FROM layer l
+              JOIN spatial_data sd ON l.spatial_data_id = sd.id
+              WHERE l.id IN (?)`
+    
+    query, args, err := sqlx.In(query, ids)
+    if err != nil {
+        return nil, errors.ErrInternalServer
+    }
+    
+    query = s.db.Rebind(query)
+    return s.queryFormattedLayers(query, args...)
+}
+
+func (s *Service) queryFormattedLayers(query string, args ...interface{}) ([]FormattedLayer, error) {
+    rows, err := s.db.Query(query, args...)
+    if err != nil {
+        return nil, errors.ErrInternalServer
+    }
+    defer rows.Close()
+
+    var result []FormattedLayer
+    for rows.Next() {
+        var id int64
+        var layerName, color, tableName, dataType string
+        var coordinate []float64
+        err := rows.Scan(&id, &layerName, &coordinate, &color, &tableName, &dataType)
+        if err != nil {
+            return nil, errors.ErrInternalServer
+        }
+
+        layerType := utils.GetLayerType(dataType)
+        paint := utils.GetPaint(dataType, color)
+
+        layer := map[string]interface{}{
+            "id": tableName,
+            "source": map[string]interface{}{
+                "type":  "vector",
+                "tiles": fmt.Sprintf("http://localhost:8080/mvt/%s/{z}/{x}/{y}", tableName),
+            },
+            "source-layer": tableName,
+            "type":         layerType,
+            "paint":        paint,
+        }
+
+        layerJSON, err := json.Marshal(layer)
+        if err != nil {
+            return nil, errors.ErrInternalServer
+        }
+
+        result = append(result, FormattedLayer{
+            ID:         id,
+            LayerName:  layerName,
+            Coordinate: coordinate,
+            Layer:      layerJSON,
+        })
+    }
+
+    if err = rows.Err(); err != nil {
+        return nil, errors.ErrInternalServer
+    }
+
+    if len(result) == 0 {
+        return nil, errors.ErrNotFound
+    }
+
+    return result, nil
 }

@@ -1,13 +1,14 @@
 # GeoSpatial Article Management System API Documentation
 
-This document outlines the API endpoints for the GeoSpatial Article Management System, which includes authentication, article management, spatial data handling, layer group management, and MVT (Mapbox Vector Tiles) functionality.
+This document outlines the API endpoints for the GeoSpatial Article Management System, which includes authentication, article management, spatial data handling, layer management, layer group management, and MVT (Mapbox Vector Tiles) functionality.
 
 ## Table of Contents
 1. [Authentication API](#authentication-api)
 2. [Article API](#article-api)
 3. [Spatial Data API](#spatial-data-api)
-4. [Layer Group API](#layer-group-api)
-5. [MVT API](#mvt-api)
+4. [Layer API](#layer-api)
+5. [Layer Group API](#layer-group-api)
+6. [MVT API](#mvt-api)
 
 ## Authentication API
 
@@ -106,6 +107,52 @@ Update existing spatial data.
 Delete a spatial data table.
 
 **Example:** `DELETE /spatial-data/existing_table`
+
+## Layer API
+
+Manages layers for visualizing spatial data.
+
+### GET /layers
+Retrieve layers.
+
+**Query Parameters:**
+- `id`: Comma-separated list of layer IDs or "*" for all layers
+
+**Examples:**
+- `GET /layers?id=1,2,3` (retrieve specific layers)
+- `GET /layers?id=*` (retrieve all layers)
+
+### POST /layers
+Create a new layer.
+
+**Request Body:**
+```json
+{
+    "spatial_data_id": 1,
+    "layer_name": "New Layer",
+    "coordinate": [0, 0],
+    "color": "#FF5733"
+}
+```
+
+### PUT /layers/:id
+Update an existing layer.
+
+**Example:** `PUT /layers/1`
+
+**Request Body:**
+```json
+{
+    "layer_name": "Updated Layer Name",
+    "coordinate": [1, 1],
+    "color": "#33FF57"
+}
+```
+
+### DELETE /layers/:id
+Delete a specific layer.
+
+**Example:** `DELETE /layers/1`
 
 ## Layer Group API
 
