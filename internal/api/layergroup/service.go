@@ -76,3 +76,37 @@ func (s *Service) RemoveLayerFromGroup(layerID, groupID int64) error {
     
     return nil
 }
+
+func (s *Service) DeleteGroup(groupID int64) error {
+    tx, err := s.db.Beginx()
+    if err != nil {
+        return errors.ErrInternalServer
+    }
+    defer tx.Rollback()
+
+    // Delete related entries in layer_layer_group
+    _, err = tx.Exec("DELETE FROM layer_layer_group WHERE layer_group_id = $1", groupID)
+    if err != nil {
+        return errors.ErrInternalServer
+    }
+
+    // Delete the group
+    result, err := tx.Exec("DELETE FROM layer_group WHERE id = $1", groupID)
+    if err != nil {
+        return errors.ErrInternalServer
+    }
+
+    rowsAffected, err := result.RowsAffected()
+    if err != nil {
+        return errors.ErrInternalServer
+    }
+    if rowsAffected == 0 {
+        return errors.ErrNotFound
+    }
+
+    if err := tx.Commit(); err != nil {
+        return errors.ErrInternalServer
+    }
+
+    return nil
+}

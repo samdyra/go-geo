@@ -2,6 +2,7 @@
 
 This document outlines the API endpoints for the GeoSpatial Article Management System, which includes authentication, article management, spatial data handling, layer management, layer group management, and MVT (Mapbox Vector Tiles) functionality.
 
+
 ## Table of Contents
 1. [Authentication API](#authentication-api)
 2. [Article API](#article-api)
@@ -12,8 +13,6 @@ This document outlines the API endpoints for the GeoSpatial Article Management S
 
 ## Authentication API
 
-Handles user authentication and session management.
-
 ### POST /signup
 Create a new user account.
 
@@ -22,6 +21,13 @@ Create a new user account.
 {
     "username": "newuser",
     "password": "securepassword123"
+}
+```
+
+**Response:**
+```json
+{
+    "message": "User created successfully"
 }
 ```
 
@@ -36,20 +42,75 @@ Authenticate an existing user.
 }
 ```
 
+**Response:**
+```json
+{
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+        "id": 1,
+        "username": "existinguser",
+        "created_at": "2023-05-01T10:00:00Z",
+        "updated_at": "2023-05-01T10:00:00Z"
+    }
+}
+```
+
 ### POST /logout
 Log out the current user.
 
-## Article API
+**Response:**
+```json
+{
+    "message": "Logged out successfully"
+}
+```
 
-Manages articles within the system.
+## Article API
 
 ### GET /articles
 Retrieve all articles.
+
+**Response:**
+```json
+[
+    {
+        "id": 1,
+        "title": "First Article",
+        "author": "John Doe",
+        "content": "This is the content of the first article.",
+        "image_url": "https://example.com/image1.jpg",
+        "created_by": 1,
+        "created_at": "2023-05-01T12:00:00Z"
+    },
+    {
+        "id": 2,
+        "title": "Second Article",
+        "author": "Jane Smith",
+        "content": "This is the content of the second article.",
+        "image_url": "https://example.com/image2.jpg",
+        "created_by": 2,
+        "created_at": "2023-05-02T14:30:00Z"
+    }
+]
+```
 
 ### GET /articles/:id
 Retrieve a specific article by ID.
 
 **Example:** `GET /articles/1`
+
+**Response:**
+```json
+{
+    "id": 1,
+    "title": "First Article",
+    "author": "John Doe",
+    "content": "This is the content of the first article.",
+    "image_url": "https://example.com/image1.jpg",
+    "created_by": 1,
+    "created_at": "2023-05-01T12:00:00Z"
+}
+```
 
 ### POST /articles
 Create a new article.
@@ -60,6 +121,19 @@ Create a new article.
     "title": "New Article Title",
     "content": "Article content goes here.",
     "image_url": "https://example.com/image.jpg"
+}
+```
+
+**Response:**
+```json
+{
+    "id": 3,
+    "title": "New Article Title",
+    "author": "Current User",
+    "content": "Article content goes here.",
+    "image_url": "https://example.com/image.jpg",
+    "created_by": 1,
+    "created_at": "2023-05-03T09:15:00Z"
 }
 ```
 
@@ -77,14 +151,32 @@ Update an existing article.
 }
 ```
 
+**Response:**
+```json
+{
+    "id": 1,
+    "title": "Updated Article Title",
+    "author": "John Doe",
+    "content": "Updated article content.",
+    "image_url": "https://example.com/updated-image.jpg",
+    "created_by": 1,
+    "created_at": "2023-05-01T12:00:00Z"
+}
+```
+
 ### DELETE /articles/:id
 Delete a specific article.
 
 **Example:** `DELETE /articles/1`
 
-## Spatial Data API
+**Response:**
+```json
+{
+    "message": "Article deleted successfully"
+}
+```
 
-Handles geospatial data operations.
+## Spatial Data API
 
 ### POST /spatial-data
 Upload new spatial data.
@@ -93,6 +185,13 @@ Upload new spatial data.
 - `table_name`: "new_spatial_data"
 - `type`: "point"
 - `file`: [GeoJSON file]
+
+**Response:**
+```json
+{
+    "message": "Spatial data created successfully"
+}
+```
 
 ### PUT /spatial-data/:table_name
 Update existing spatial data.
@@ -103,14 +202,53 @@ Update existing spatial data.
 - `table_name`: "updated_table_name" (optional)
 - `file`: [Updated GeoJSON file] (optional)
 
+**Response:**
+```json
+{
+    "message": "Spatial data updated successfully"
+}
+```
+
 ### DELETE /spatial-data/:table_name
 Delete a spatial data table.
 
 **Example:** `DELETE /spatial-data/existing_table`
 
-## Layer API
+**Response:**
+```json
+{
+    "message": "Spatial data deleted successfully"
+}
+```
 
-Manages layers for visualizing spatial data.
+### GET /spatial-data
+Get all spatial data
+
+**Response:**
+```json
+[
+    {
+        "id": 1,
+        "table_name": "cities",
+        "type": "point",
+        "created_at": "2023-05-01T10:00:00Z",
+        "updated_at": "2023-05-01T10:00:00Z",
+        "created_by": 1,
+        "updated_by": 1
+    },
+    {
+        "id": 2,
+        "table_name": "rivers",
+        "type": "linestring",
+        "created_at": "2023-05-02T11:30:00Z",
+        "updated_at": "2023-05-02T11:30:00Z",
+        "created_by": 2,
+        "updated_by": 2
+    }
+]
+```
+
+## Layer API
 
 ### GET /layers
 Retrieve layers.
@@ -122,6 +260,48 @@ Retrieve layers.
 - `GET /layers?id=1,2,3` (retrieve specific layers)
 - `GET /layers?id=*` (retrieve all layers)
 
+**Response:**
+```json
+[
+    {
+        "id": 1,
+        "layer_name": "City Layer",
+        "coordinate": [0, 0],
+        "layer": {
+            "id": "cities",
+            "source": {
+                "type": "vector",
+                "tiles": "http://localhost:8080/mvt/cities/{z}/{x}/{y}"
+            },
+            "source-layer": "cities",
+            "type": "circle",
+            "paint": {
+                "circle-color": "#FF5733",
+                "circle-radius": 5
+            }
+        }
+    },
+    {
+        "id": 2,
+        "layer_name": "River Layer",
+        "coordinate": [0, 0],
+        "layer": {
+            "id": "rivers",
+            "source": {
+                "type": "vector",
+                "tiles": "http://localhost:8080/mvt/rivers/{z}/{x}/{y}"
+            },
+            "source-layer": "rivers",
+            "type": "line",
+            "paint": {
+                "line-color": "#3366FF",
+                "line-width": 2
+            }
+        }
+    }
+]
+```
+
 ### POST /layers
 Create a new layer.
 
@@ -132,6 +312,21 @@ Create a new layer.
     "layer_name": "New Layer",
     "coordinate": [0, 0],
     "color": "#FF5733"
+}
+```
+
+**Response:**
+```json
+{
+    "id": 3,
+    "spatial_data_id": 1,
+    "layer_name": "New Layer",
+    "coordinate": [0, 0],
+    "color": "#FF5733",
+    "created_at": "2023-05-03T14:00:00Z",
+    "updated_at": "2023-05-03T14:00:00Z",
+    "created_by": 1,
+    "updated_by": 1
 }
 ```
 
@@ -149,17 +344,51 @@ Update an existing layer.
 }
 ```
 
+**Response:**
+```json
+{
+    "id": 1,
+    "spatial_data_id": 1,
+    "layer_name": "Updated Layer Name",
+    "coordinate": [1, 1],
+    "color": "#33FF57",
+    "created_at": "2023-05-01T10:00:00Z",
+    "updated_at": "2023-05-03T15:30:00Z",
+    "created_by": 1,
+    "updated_by": 1
+}
+```
+
 ### DELETE /layers/:id
 Delete a specific layer.
 
 **Example:** `DELETE /layers/1`
 
-## Layer Group API
+**Response:**
+```json
+{
+    "message": "Layer deleted successfully"
+}
+```
 
-Manages layer groups for organizing spatial data.
+## Layer Group API
 
 ### GET /layer-groups
 Retrieve all layer groups.
+
+**Response:**
+```json
+[
+    {
+        "group_name": "City Group",
+        "layer_names": ["City Layer", "Urban Areas Layer"]
+    },
+    {
+        "group_name": "Water Group",
+        "layer_names": ["River Layer", "Lake Layer"]
+    }
+]
+```
 
 ### POST /layer-groups
 Create a new layer group.
@@ -168,6 +397,13 @@ Create a new layer group.
 ```json
 {
     "group_name": "New Layer Group"
+}
+```
+
+**Response:**
+```json
+{
+    "message": "Group created successfully"
 }
 ```
 
@@ -182,6 +418,13 @@ Add a layer to a group.
 }
 ```
 
+**Response:**
+```json
+{
+    "message": "Layer added to group successfully"
+}
+```
+
 ### DELETE /layer-groups/remove-layer
 Remove a layer from a group.
 
@@ -189,16 +432,31 @@ Remove a layer from a group.
 - `layer_id`: 1
 - `group_id`: 2
 
-## MVT API
+**Response:**
+```json
+{
+    "message": "Layer removed from group successfully"
+}
+```
 
-Provides Mapbox Vector Tiles for efficient map rendering.
+### DELETE /layer-groups/:id
+Delete a group
+
+**Response:**
+```json
+{
+    "message": "Group deleted successfully"
+}
+```
+
+## MVT API
 
 ### GET /mvt/:table_name/:z/:x/:y
 Retrieve a vector tile for a specific table and tile coordinates.
 
 **Example:** `GET /mvt/my_spatial_data/12/1234/5678`
 
-- `:table_name` - Name of the spatial data table
-- `:z` - Zoom level
-- `:x` - X coordinate of the tile
-- `:y` - Y coordinate of the tile
+**Response:**
+Binary data (application/x-protobuf)
+
+Note: The response for this endpoint is binary data representing the vector tile, not JSON.

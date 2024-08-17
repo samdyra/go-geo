@@ -50,6 +50,7 @@ func (h *Handler) AddLayerToGroup(c *gin.Context) {
     c.JSON(http.StatusOK, gin.H{"message": "Layer added to group successfully"})
 }
 
+
 func (h *Handler) GetGroupsWithLayers(c *gin.Context) {
     groups, err := h.service.GetGroupsWithLayers()
     if err != nil {
@@ -85,4 +86,25 @@ func (h *Handler) RemoveLayerFromGroup(c *gin.Context) {
     }
 
     c.JSON(http.StatusOK, gin.H{"message": "Layer removed from group successfully"})
+}
+
+func (h *Handler) DeleteGroup(c *gin.Context) {
+    groupID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, errors.NewAPIError(errors.ErrInvalidInput))
+        return
+    }
+
+    err = h.service.DeleteGroup(groupID)
+    if err != nil {
+        switch err {
+        case errors.ErrNotFound:
+            c.JSON(http.StatusNotFound, errors.NewAPIError(err))
+        default:
+            c.JSON(http.StatusInternalServerError, errors.NewAPIError(err))
+        }
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"message": "Group deleted successfully"})
 }

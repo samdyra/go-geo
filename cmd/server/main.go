@@ -56,7 +56,6 @@ func main() {
 	r.GET("/articles", articleHandler.GetArticles)
 	r.GET("/articles/:id", articleHandler.GetArticle)
 	r.GET("/mvt/:table_name/:z/:x/:y", mvtHandler.GetMVT)
-	r.GET("/spatial-data", spatialDataHandler.GetSpatialDataList)
 	r.GET("/layer-groups", layerGroupHandler.GetGroupsWithLayers)
 
 	// Protected routes group
@@ -75,6 +74,7 @@ func main() {
 			spatialData.POST("", spatialDataHandler.CreateSpatialData)
 			spatialData.DELETE("/:table_name", spatialDataHandler.DeleteSpatialData)
 			spatialData.PUT("/:table_name", spatialDataHandler.EditSpatialData)
+			spatialData.GET("/", spatialDataHandler.GetSpatialDataList)
 		}
 
 		layerGroups := protected.Group("layer-groups")
@@ -82,6 +82,7 @@ func main() {
 			layerGroups.POST("", layerGroupHandler.CreateGroup)
 			layerGroups.POST("/add-layer", layerGroupHandler.AddLayerToGroup)
 			layerGroups.DELETE("/remove-layer", layerGroupHandler.RemoveLayerFromGroup)
+			layerGroups.DELETE("/:id", layerGroupHandler.DeleteGroup) // New endpoint for deleting a group
 		}
 	}
 
