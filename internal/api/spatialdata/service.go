@@ -114,14 +114,10 @@ func (s *SpatialDataService) DeleteSpatialData(tableName string) error {
     }
     defer tx.Rollback()
 
-    // Delete from spatial_data table
-    result, err := tx.Exec("DELETE FROM spatial_data WHERE table_name = $1", tableName)
+    // Delete from layer_layer_group
+    _, err = tx.Exec("DELETE FROM layer_layer_group WHERE layer_id IN (SELECT id FROM layer WHERE spatial_data_id = (SELECT id FROM spatial_data WHERE table_name = $1))", tableName)
     if err != nil {
         return errors.ErrInternalServer
-    }
-    
-    if rowsAffected, _ := result.RowsAffected(); rowsAffected == 0 {
-        return errors.ErrNotFound
     }
 
     // Delete associated layers
@@ -130,10 +126,14 @@ func (s *SpatialDataService) DeleteSpatialData(tableName string) error {
         return errors.ErrInternalServer
     }
 
-    // Delete from layer_layer_group
-    _, err = tx.Exec("DELETE FROM layer_layer_group WHERE layer_id IN (SELECT id FROM layer WHERE spatial_data_id = (SELECT id FROM spatial_data WHERE table_name = $1))", tableName)
+    // Delete from spatial_data table
+    result, err := tx.Exec("DELETE FROM spatial_data WHERE table_name = $1", tableName)
     if err != nil {
         return errors.ErrInternalServer
+    }
+
+    if rowsAffected, _ := result.RowsAffected(); rowsAffected == 0 {
+        return errors.ErrNotFound
     }
 
     // Drop the spatial spatial_data table
