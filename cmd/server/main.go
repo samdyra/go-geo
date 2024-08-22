@@ -7,6 +7,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/samdyra/go-geo/internal/api/article"
+	"github.com/samdyra/go-geo/internal/api/layer"
 	"github.com/samdyra/go-geo/internal/api/layergroup"
 	"github.com/samdyra/go-geo/internal/api/mvt"
 	"github.com/samdyra/go-geo/internal/api/spatialdata"
@@ -28,6 +29,9 @@ func main() {
 
 	spatialDataService := spatialdata.NewSpatialDataService(db)
 	spatialDataHandler := spatialdata.NewSpatialDataHandler(spatialDataService)
+
+	layerService := layer.NewService(db)
+	layerHandler := layer.NewHandler(layerService)
 
 	layerGroupService := layergroup.NewService(db)
 	layerGroupHandler := layergroup.NewHandler(layerGroupService)
@@ -57,6 +61,7 @@ func main() {
 	r.GET("/articles/:id", articleHandler.GetArticle)
 	r.GET("/mvt/:table_name/:z/:x/:y", mvtHandler.GetMVT)
 	r.GET("/layer-groups", layerGroupHandler.GetGroupsWithLayers)
+	r.GET("/layers", layerHandler.GetFormattedLayers)
 
 	// Protected routes group
 	protected := r.Group("/")
@@ -75,6 +80,13 @@ func main() {
 			spatialData.DELETE("/:table_name", spatialDataHandler.DeleteSpatialData)
 			spatialData.PUT("/:table_name", spatialDataHandler.EditSpatialData)
 			spatialData.GET("", spatialDataHandler.GetSpatialDataList)
+		}
+
+		layers := protected.Group("layers")
+		{
+			layers.POST("", layerHandler.CreateLayer)
+			layers.PUT("/:id", layerHandler.UpdateLayer)
+			layers.DELETE("/:id", layerHandler.DeleteLayer)
 		}
 
 		layerGroups := protected.Group("layer-groups")

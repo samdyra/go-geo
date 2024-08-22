@@ -24,8 +24,19 @@ func (h *Handler) CreateLayer(c *gin.Context) {
         return
     }
 
-    userID, _ := c.Get("user_id")
-    err := h.service.CreateLayer(input, userID.(int64))
+    // Validate coordinate
+    if len(input.Coordinate) != 2 {
+        c.JSON(http.StatusBadRequest, errors.ErrInternalServer)
+        return
+    }
+
+    username, exists := c.Get("username")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, errors.NewAPIError(errors.ErrUnauthorized))
+        return
+    }
+
+    err := h.service.CreateLayer(input, username.(string))
     if err != nil {
         c.JSON(http.StatusInternalServerError, errors.NewAPIError(err))
         return

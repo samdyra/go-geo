@@ -3,6 +3,6 @@ CREATE TABLE IF NOT EXISTS layer_group (
     group_name VARCHAR(100) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    created_by INTEGER REFERENCES users(id),
-    updated_by INTEGER REFERENCES users(id)
+    created_by VARCHAR(50) REFERENCES users(username),
+    updated_by VARCHAR(50) REFERENCES users(username)
 );

@@ -18,13 +18,21 @@ func NewService(db *sqlx.DB) *Service {
     return &Service{db: db}
 }
 
-func (s *Service) CreateLayer(layer LayerCreate, userID int64) error {
+func (s *Service) CreateLayer(layer LayerCreate, username string) error {
     query := `INSERT INTO layer (spatial_data_id, layer_name, coordinate, color, created_at, updated_at, created_by, updated_by)
               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
     
     now := time.Now()
-    _, err := s.db.Exec(query, layer.SpatialDataID, layer.LayerName, layer.Coordinate, layer.Color, now, now, userID, userID)
+
+    // Convert the coordinate slice to a JSON string
+    coordinateJSON, err := json.Marshal(layer.Coordinate)
     if err != nil {
+        return errors.ErrInternalServer
+    }
+
+    _, err = s.db.Exec(query, layer.SpatialDataID, layer.LayerName, coordinateJSON, layer.Color, now, now, username, username)
+    if err != nil {
+
         return errors.ErrInternalServer
     }
     
