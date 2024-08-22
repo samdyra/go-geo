@@ -46,50 +46,60 @@ func (h *Handler) CreateLayer(c *gin.Context) {
 }
 
 func (h *Handler) GetFormattedLayers(c *gin.Context) {
-    idParam := c.Query("id")
 
-    if idParam == "" {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Please provide 'id' parameter. Use 'id=*' to fetch all layers"})
-        return
-    }
 
-    var ids []int64
-    var err error
+	idParam := c.Query("id")
 
-    if idParam == "*" {
-        // Fetch all layers
-        layers, err := h.service.GetAllFormattedLayers()
-        if err != nil {
-            c.JSON(http.StatusInternalServerError, errors.NewAPIError(err))
-            return
-        }
-        c.JSON(http.StatusOK, layers)
-        return
-    }
+	if idParam == "" {
 
-    // Parse provided IDs
-    idStrings := strings.Split(idParam, ",")
-    for _, idStr := range idStrings {
-        id, err := strconv.ParseInt(strings.TrimSpace(idStr), 10, 64)
-        if err != nil {
-            c.JSON(http.StatusBadRequest, errors.NewAPIError(errors.ErrInvalidInput))
-            return
-        }
-        ids = append(ids, id)
-    }
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Please provide 'id' parameter. Use 'id=*' to fetch all layers"})
+		return
+	}
 
-    layers, err := h.service.GetFormattedLayers(ids)
-    if err != nil {
-        switch err {
-        case errors.ErrNotFound:
-            c.JSON(http.StatusNotFound, errors.NewAPIError(err))
-        default:
-            c.JSON(http.StatusInternalServerError, errors.NewAPIError(err))
-        }
-        return
-    }
+	var ids []int64
+	var err error
 
-    c.JSON(http.StatusOK, layers)
+	if idParam == "*" {
+
+		layers, err := h.service.GetAllFormattedLayers()
+		if err != nil {
+
+			c.JSON(http.StatusInternalServerError, errors.NewAPIError(err))
+			return
+		}
+
+		c.JSON(http.StatusOK, layers)
+		return
+	}
+
+	// Parse provided IDs
+	idStrings := strings.Split(idParam, ",")
+	for _, idStr := range idStrings {
+		id, err := strconv.ParseInt(strings.TrimSpace(idStr), 10, 64)
+		if err != nil {
+
+			c.JSON(http.StatusBadRequest, errors.NewAPIError(errors.ErrInvalidInput))
+			return
+		}
+		ids = append(ids, id)
+	}
+
+
+	layers, err := h.service.GetFormattedLayers(ids)
+	if err != nil {
+		switch err {
+		case errors.ErrNotFound:
+
+			c.JSON(http.StatusNotFound, errors.NewAPIError(err))
+		default:
+
+			c.JSON(http.StatusInternalServerError, errors.NewAPIError(err))
+		}
+		return
+	}
+
+
+	c.JSON(http.StatusOK, layers)
 }
 
 func (h *Handler) UpdateLayer(c *gin.Context) {
