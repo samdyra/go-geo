@@ -10,6 +10,7 @@ import (
 	"github.com/samdyra/go-geo/internal/api/layer"
 	"github.com/samdyra/go-geo/internal/api/layergroup"
 	"github.com/samdyra/go-geo/internal/api/mvt"
+	"github.com/samdyra/go-geo/internal/api/report" // New import
 	"github.com/samdyra/go-geo/internal/api/spatialdata"
 	"github.com/samdyra/go-geo/internal/api/user"
 	"github.com/samdyra/go-geo/internal/config"
@@ -39,6 +40,9 @@ func main() {
 	mvtService := mvt.NewMVTService(db)
 	mvtHandler := mvt.NewMVTHandler(mvtService)
 
+	reportService := report.NewReportService(db) 
+	reportHandler := report.NewReportHandler(reportService)
+
 	r := gin.Default()
 	r.SetTrustedProxies([]string{"127.0.0.1", "::1"})
 
@@ -62,6 +66,9 @@ func main() {
 	r.GET("/mvt/:table_name/:z/:x/:y", mvtHandler.GetMVT)
 	r.GET("/layer-groups", layerGroupHandler.GetGroupsWithLayers)
 	r.GET("/layers", layerHandler.GetFormattedLayers)
+	r.POST("/reports", reportHandler.CreateReport)
+	r.GET("/reports", reportHandler.GetReports)
+	r.GET("/reports/:id", reportHandler.GetReport)
 
 	// Protected routes group
 	protected := r.Group("/")
@@ -94,7 +101,13 @@ func main() {
 			layerGroups.POST("", layerGroupHandler.CreateGroup)
 			layerGroups.POST("/add-layer", layerGroupHandler.AddLayerToGroup)
 			layerGroups.DELETE("/remove-layer", layerGroupHandler.RemoveLayerFromGroup)
-			layerGroups.DELETE("/:id", layerGroupHandler.DeleteGroup) // New endpoint for deleting a group
+			layerGroups.DELETE("/:id", layerGroupHandler.DeleteGroup)
+		}
+
+		reports := protected.Group("reports")  // New protected group for reports
+		{
+			reports.PUT("/:id", reportHandler.UpdateReport)
+			reports.DELETE("/:id", reportHandler.DeleteReport)
 		}
 	}
 
