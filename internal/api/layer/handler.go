@@ -89,7 +89,6 @@ func (h *Handler) GetFormattedLayers(c *gin.Context) {
 	if err != nil {
 		switch err {
 		case errors.ErrNotFound:
-
 			c.JSON(http.StatusNotFound, errors.NewAPIError(err))
 		default:
 
@@ -103,21 +102,34 @@ func (h *Handler) GetFormattedLayers(c *gin.Context) {
 }
 
 func (h *Handler) UpdateLayer(c *gin.Context) {
+
+
     id, err := strconv.ParseInt(c.Param("id"), 10, 64)
     if err != nil {
+
         c.JSON(http.StatusBadRequest, errors.NewAPIError(errors.ErrInvalidInput))
         return
     }
+
 
     var input LayerUpdate
     if err := c.ShouldBindJSON(&input); err != nil {
+
         c.JSON(http.StatusBadRequest, errors.NewAPIError(errors.ErrInvalidInput))
         return
     }
 
-    userID, _ := c.Get("user_id")
-    err = h.service.UpdateLayer(id, input, userID.(int64))
+
+    username, exists := c.Get("username")
+    if !exists {
+        c.JSON(http.StatusUnauthorized, errors.NewAPIError(errors.ErrUnauthorized))
+        return
+    }
+
+
+    err = h.service.UpdateLayer(id, input, username.(string))
     if err != nil {
+
         switch err {
         case errors.ErrNotFound:
             c.JSON(http.StatusNotFound, errors.NewAPIError(err))
@@ -126,6 +138,7 @@ func (h *Handler) UpdateLayer(c *gin.Context) {
         }
         return
     }
+
 
     c.JSON(http.StatusOK, gin.H{"message": "Layer updated successfully"})
 }

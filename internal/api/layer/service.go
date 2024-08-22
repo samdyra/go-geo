@@ -40,30 +40,39 @@ func (s *Service) CreateLayer(layer LayerCreate, username string) error {
     return nil
 }
 
-
-func (s *Service) UpdateLayer(id int64, update LayerUpdate, userID int64) error {
+func (s *Service) UpdateLayer(id int64, update LayerUpdate, username string) error {
     query := "UPDATE layer SET updated_at = $1, updated_by = $2"
-    args := []interface{}{time.Now(), userID}
+    args := []interface{}{time.Now(), username}
     argCount := 3
 
     if update.LayerName != nil {
         query += fmt.Sprintf(", layer_name = $%d", argCount)
         args = append(args, *update.LayerName)
+
         argCount++
     }
     if update.Coordinate != nil {
         query += fmt.Sprintf(", coordinate = $%d", argCount)
-        args = append(args, *update.Coordinate)
+        coordinateJSON, err := json.Marshal(*update.Coordinate)
+        if err != nil {
+
+            return errors.ErrInternalServer
+        }
+        args = append(args, coordinateJSON)
+
         argCount++
     }
     if update.Color != nil {
         query += fmt.Sprintf(", color = $%d", argCount)
         args = append(args, *update.Color)
+
         argCount++
     }
 
     query += fmt.Sprintf(" WHERE id = $%d", argCount)
     args = append(args, id)
+
+
 
     result, err := s.db.Exec(query, args...)
     if err != nil {
@@ -72,11 +81,16 @@ func (s *Service) UpdateLayer(id int64, update LayerUpdate, userID int64) error 
 
     rowsAffected, err := result.RowsAffected()
     if err != nil {
+
         return errors.ErrInternalServer
     }
+
+
     if rowsAffected == 0 {
+
         return errors.ErrNotFound
     }
+
 
     return nil
 }
@@ -196,10 +210,6 @@ func (s *Service) queryFormattedLayers(query string, args ...interface{}) ([]For
 
 	if err = rows.Err(); err != nil {
 		return nil, errors.ErrInternalServer
-	}
-
-	if len(result) == 0 {
-		return nil, errors.ErrNotFound
 	}
 
 	return result, nil
