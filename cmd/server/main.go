@@ -41,7 +41,7 @@ func main() {
 	// CORS middleware
 	r.Use(cors.New(cors.Config{
 		// @TODO: Change this to the actual frontend URL from env
-		AllowOrigins:     []string{"http://localhost:5173"},
+		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:5174"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -74,7 +74,7 @@ func main() {
 			spatialData.POST("", spatialDataHandler.CreateSpatialData)
 			spatialData.DELETE("/:table_name", spatialDataHandler.DeleteSpatialData)
 			spatialData.PUT("/:table_name", spatialDataHandler.EditSpatialData)
-			spatialData.GET("/", spatialDataHandler.GetSpatialDataList)
+			spatialData.GET("", spatialDataHandler.GetSpatialDataList)
 		}
 
 		layerGroups := protected.Group("layer-groups")

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"github.com/samdyra/go-geo/internal/utils/errors"
 )
 
@@ -18,10 +19,11 @@ func NewSpatialDataHandler(spatialDataService *SpatialDataService) *SpatialDataH
 
 func (h *SpatialDataHandler) CreateSpatialData(c *gin.Context) {
     var input SpatialDataCreate
-    if err := c.ShouldBind(&input); err != nil {
+    if err := c.ShouldBindWith(&input, binding.Form); err != nil {
         c.JSON(http.StatusBadRequest, errors.NewAPIError(errors.ErrInvalidInput))
         return
     }
+
 
     file, err := c.FormFile("file")
     if err != nil {

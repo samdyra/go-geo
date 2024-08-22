@@ -21,6 +21,15 @@ func NewSpatialDataService(db *sqlx.DB) *SpatialDataService {
 }
 
 func (s *SpatialDataService) CreateSpatialData(spatial_data SpatialDataCreate, file io.Reader, username string) error {
+    var exists bool
+    err := s.db.QueryRow("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)", spatial_data.TableName).Scan(&exists)
+    if err != nil {
+        return errors.ErrInternalServer
+    }
+    if exists {
+        return errors.ErrTableAlreadyExists
+    }
+    
     tx, err := s.db.Beginx()
     if err != nil {
         return errors.ErrInternalServer
@@ -29,7 +38,6 @@ func (s *SpatialDataService) CreateSpatialData(spatial_data SpatialDataCreate, f
 
     now := time.Now()
 
-    // Insert into spatial_data table
     _, err = tx.Exec(`
         INSERT INTO spatial_data (table_name, type, created_at, updated_at, created_by, updated_by)
         VALUES ($1, $2, $3, $4, $5, $6)
@@ -38,7 +46,6 @@ func (s *SpatialDataService) CreateSpatialData(spatial_data SpatialDataCreate, f
         return errors.ErrInternalServer
     }
 
-    // Create new table for the spatial spatial_data
     _, err = tx.Exec(fmt.Sprintf(`
     CREATE TABLE IF NOT EXISTS %s (
         id SERIAL PRIMARY KEY,
@@ -54,19 +61,16 @@ func (s *SpatialDataService) CreateSpatialData(spatial_data SpatialDataCreate, f
         return errors.ErrInternalServer
     }
 
-    // Read the entire file
     fileBytes, err := io.ReadAll(file)
     if err != nil {
         return errors.ErrInvalidInput
     }
 
-    // Parse GeoJSON
     fc, err := geojson.UnmarshalFeatureCollection(fileBytes)
     if err != nil {
         return errors.ErrInvalidInput
     }
 
-    // Insert features into the new table
     for _, feature := range fc.Features {
         geom := feature.Geometry
         properties, err := json.Marshal(feature.Properties)
@@ -98,10 +102,6 @@ func (s *SpatialDataService) GetSpatialDataList() ([]SpatialData, error) {
     err := s.db.Select(&spatialDataList, query)
     if err != nil {
         return nil, errors.ErrInternalServer
-    }
-
-    if len(spatialDataList) == 0 {
-        return nil, errors.ErrNotFound
     }
 
     return spatialDataList, nil
