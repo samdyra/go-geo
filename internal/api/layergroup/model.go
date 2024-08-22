@@ -21,6 +21,12 @@ type LayerToGroup struct {
 }
 
 type GroupWithLayers struct {
-    GroupName  string   `json:"group_name"`
-    LayerNames []string `json:"layer_names"`
+    GroupID   int64         `json:"group_id"`
+    GroupName string        `json:"group_name"`
+    Layers    []LayerDetail `json:"layers"`
+}
+
+type LayerDetail struct {
+    LayerID   int64  `json:"layer_id"`
+    LayerName string `json:"layer_name"`
 }

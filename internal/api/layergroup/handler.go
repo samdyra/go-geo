@@ -23,8 +23,8 @@ func (h *Handler) CreateGroup(c *gin.Context) {
         return
     }
 
-    userID, _ := c.Get("user_id")
-    err := h.service.CreateGroup(input, userID.(int64))
+    username, _ := c.Get("username")
+    err := h.service.CreateGroup(input, username.(string))
     if err != nil {
         c.JSON(http.StatusInternalServerError, errors.NewAPIError(err))
         return
@@ -40,8 +40,8 @@ func (h *Handler) AddLayerToGroup(c *gin.Context) {
         return
     }
 
-    userID, _ := c.Get("user_id")
-    err := h.service.AddLayerToGroup(input, userID.(int64))
+    username, _ := c.Get("username")
+    err := h.service.AddLayerToGroup(input, username.(string))
     if err != nil {
         c.JSON(http.StatusInternalServerError, errors.NewAPIError(err))
         return

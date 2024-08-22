@@ -379,14 +379,34 @@ Retrieve all layer groups.
 **Response:**
 ```json
 [
-    {
-        "group_name": "City Group",
-        "layer_names": ["City Layer", "Urban Areas Layer"]
-    },
-    {
-        "group_name": "Water Group",
-        "layer_names": ["River Layer", "Lake Layer"]
-    }
+  {
+    "group_id": 1,
+    "group_name": "City Group",
+    "layers": [
+      {
+        "layer_id": 1,
+        "layer_name": "Building Layer"
+      },
+      {
+        "layer_id": 2,
+        "layer_name": "Road Layer"
+      }
+    ]
+  },
+  {
+    "group_id": 2,
+    "group_name": "Water Group",
+    "layers": [
+      {
+        "layer_id": 3,
+        "layer_name": "River Layer"
+      },
+      {
+        "layer_id": 4,
+        "layer_name": "Lake Layer"
+      }
+    ]
+  }
 ]
 ```
 

@@ -15,12 +15,12 @@ func NewService(db *sqlx.DB) *Service {
     return &Service{db: db}
 }
 
-func (s *Service) CreateGroup(group LayerGroupCreate, userID int64) error {
+func (s *Service) CreateGroup(group LayerGroupCreate, username string) error {
     query := `INSERT INTO layer_group (group_name, created_at, updated_at, created_by, updated_by)
               VALUES ($1, $2, $3, $4, $5)`
     
     now := time.Now()
-    _, err := s.db.Exec(query, group.GroupName, now, now, userID, userID)
+    _, err := s.db.Exec(query, group.GroupName, now, now, username, username)
     if err != nil {
         return errors.ErrInternalServer
     }
@@ -28,12 +28,12 @@ func (s *Service) CreateGroup(group LayerGroupCreate, userID int64) error {
     return nil
 }
 
-func (s *Service) AddLayerToGroup(connection LayerToGroup, userID int64) error {
+func (s *Service) AddLayerToGroup(connection LayerToGroup, username string) error {
     query := `INSERT INTO layer_layer_group (layer_id, layer_group_id, created_at, updated_at, created_by, updated_by)
               VALUES ($1, $2, $3, $4, $5, $6)`
     
     now := time.Now()
-    _, err := s.db.Exec(query, connection.LayerID, connection.GroupID, now, now, userID, userID)
+    _, err := s.db.Exec(query, connection.LayerID, connection.GroupID, now, now, username, username)
     if err != nil {
         return errors.ErrInternalServer
     }
@@ -42,11 +42,25 @@ func (s *Service) AddLayerToGroup(connection LayerToGroup, userID int64) error {
 }
 
 func (s *Service) GetGroupsWithLayers() ([]GroupWithLayers, error) {
-    query := `SELECT lg.group_name, ARRAY_AGG(l.layer_name) as layer_names
-              FROM layer_group lg
-              LEFT JOIN layer_layer_group llg ON lg.id = llg.layer_group_id
-              LEFT JOIN layer l ON llg.layer_id = l.id
-              GROUP BY lg.id, lg.group_name`
+    query := `
+        SELECT 
+            lg.id AS group_id, 
+            lg.group_name, 
+            COALESCE(json_agg(
+                json_build_object(
+                    'layer_id', l.id, 
+                    'layer_name', l.layer_name
+                )
+            ) FILTER (WHERE l.id IS NOT NULL), '[]'::json) AS layers
+        FROM 
+            layer_group lg
+        LEFT JOIN 
+            layer_layer_group llg ON lg.id = llg.layer_group_id
+        LEFT JOIN 
+            layer l ON llg.layer_id = l.id
+        GROUP BY 
+            lg.id, lg.group_name
+    `
     
     var results []GroupWithLayers
     err := s.db.Select(&results, query)
