@@ -1,4 +1,4 @@
-package services
+package article
 
 import (
 	"database/sql"
@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/samdyra/go-geo/internal/models"
 	"github.com/samdyra/go-geo/internal/utils/errors"
 )
 
@@ -18,8 +17,8 @@ func NewArticleService(db *sqlx.DB) *ArticleService {
 	return &ArticleService{db: db}
 }
 
-func (s *ArticleService) GetArticles() ([]models.Article, error) {
-	var articles []models.Article
+func (s *ArticleService) GetArticles() ([]Article, error) {
+	var articles []Article
 	err := s.db.Select(&articles, "SELECT * FROM articles ORDER BY created_at DESC")
 	if err != nil {
 		return nil, errors.ErrInternalServer
@@ -27,8 +26,8 @@ func (s *ArticleService) GetArticles() ([]models.Article, error) {
 	return articles, nil
 }
 
-func (s *ArticleService) GetArticleByID(id int64) (*models.Article, error) {
-	var article models.Article
+func (s *ArticleService) GetArticleByID(id int64) (*Article, error) {
+	var article Article
 	err := s.db.Get(&article, "SELECT * FROM articles WHERE id = $1", id)
 	if err == sql.ErrNoRows {
 		return nil, errors.ErrNotFound
@@ -39,7 +38,7 @@ func (s *ArticleService) GetArticleByID(id int64) (*models.Article, error) {
 	return &article, nil
 }
 
-func (s *ArticleService) CreateArticle(input models.CreateArticleInput, userID int64) (*models.Article, error) {
+func (s *ArticleService) CreateArticle(input CreateArticleInput, userID int64) (*Article, error) {
     var username string
     err := s.db.Get(&username, "SELECT username FROM users WHERE id = $1", userID)
     if err != nil {
@@ -47,7 +46,7 @@ func (s *ArticleService) CreateArticle(input models.CreateArticleInput, userID i
         return nil, errors.ErrInternalServer
     }
 
-    article := &models.Article{
+    article := &Article{
         Title:     input.Title,
         Content:   input.Content,
         ImageURL:  input.ImageURL,
@@ -68,7 +67,7 @@ func (s *ArticleService) CreateArticle(input models.CreateArticleInput, userID i
     return article, nil
 }
 
-func (s *ArticleService) UpdateArticle(id int64, input models.UpdateArticleInput, userID int64) (*models.Article, error) {
+func (s *ArticleService) UpdateArticle(id int64, input UpdateArticleInput, userID int64) (*Article, error) {
 	article, err := s.GetArticleByID(id)
 	if err != nil {
 		return nil, err

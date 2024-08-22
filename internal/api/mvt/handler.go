@@ -1,19 +1,18 @@
-package api
+package mvt
 
 import (
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/samdyra/go-geo/internal/services"
 	"github.com/samdyra/go-geo/internal/utils/errors"
 )
 
 type MVTHandler struct {
-	mvtService *services.MVTService
+	mvtService *MVTService
 }
 
-func NewMVTHandler(mvtService *services.MVTService) *MVTHandler {
+func NewMVTHandler(mvtService *MVTService) *MVTHandler {
 	return &MVTHandler{mvtService: mvtService}
 }
 

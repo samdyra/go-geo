@@ -1,25 +1,23 @@
-package api
+package user
 
 import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/samdyra/go-geo/internal/models"
-	"github.com/samdyra/go-geo/internal/services"
 	"github.com/samdyra/go-geo/internal/utils/auth"
 	"github.com/samdyra/go-geo/internal/utils/errors"
 )
 
 type Handler struct {
-    authService *services.AuthService
+    authService *AuthService
 }
 
-func NewHandler(authService *services.AuthService) *Handler {
+func NewHandler(authService *AuthService) *Handler {
     return &Handler{authService: authService}
 }
 
 func (h *Handler) SignUp(c *gin.Context) {
-    var input models.SignUpInput
+    var input SignUpInput
     if err := c.ShouldBindJSON(&input); err != nil {
         c.JSON(http.StatusBadRequest, errors.NewAPIError(errors.ErrInvalidInput))
         return
@@ -40,7 +38,7 @@ func (h *Handler) SignUp(c *gin.Context) {
 }
 
 func (h *Handler) SignIn(c *gin.Context) {
-    var input models.SignInInput
+    var input SignInInput
     if err := c.ShouldBindJSON(&input); err != nil {
         c.JSON(http.StatusBadRequest, errors.NewAPIError(errors.ErrInvalidInput))
         return

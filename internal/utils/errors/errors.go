@@ -11,6 +11,7 @@ var (
     ErrInternalServer     = errors.New("internal server error")
     ErrUnauthorized       = errors.New("unauthorized")
     ErrNotFound           = errors.New("resource not found") // Add this line
+    ErrTableAlreadyExists = errors.New("table already exists")
 )
 
 type APIError struct {
@@ -33,7 +34,9 @@ func NewAPIError(err error) APIError {
     case ErrUnauthorized:
         return APIError{Type: "UNAUTHORIZED", Message: err.Error()}
     case ErrNotFound:
-        return APIError{Type: "NOT_FOUND", Message: err.Error()} // Add this case
+        return APIError{Type: "NOT_FOUND", Message: err.Error()}
+    case ErrTableAlreadyExists:
+        return APIError{Type: "TABLE_ALREADY_EXISTS", Message: err.Error()}
     default:
         return APIError{Type: "INTERNAL_SERVER_ERROR", Message: "An unexpected error occurred"}
     }

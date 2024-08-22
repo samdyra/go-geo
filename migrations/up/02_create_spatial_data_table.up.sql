@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS spatial_data (
+    id SERIAL PRIMARY KEY,
+    table_name VARCHAR(50) NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(50) REFERENCES users(username),
+    updated_by VARCHAR(50) REFERENCES users(username)
+);
