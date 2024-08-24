@@ -50,7 +50,9 @@ func (s *Service) GetGroupsWithLayers() ([]GroupWithLayers, error) {
 			COALESCE(json_agg(
 				json_build_object(
 					'layer_id', l.id, 
-					'layer_name', l.layer_name
+					'layer_name', l.layer_name,
+					'coordinate', l.coordinate,
+					'color', l.color
 				)
 			) FILTER (WHERE l.id IS NOT NULL), '[]'::json) AS layers
 		FROM 
