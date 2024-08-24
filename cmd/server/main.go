@@ -7,6 +7,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/samdyra/go-geo/internal/api/article"
+	"github.com/samdyra/go-geo/internal/api/geojson"
 	"github.com/samdyra/go-geo/internal/api/layer"
 	"github.com/samdyra/go-geo/internal/api/layergroup"
 	"github.com/samdyra/go-geo/internal/api/mvt"
@@ -40,6 +41,9 @@ func main() {
 	mvtService := mvt.NewMVTService(db)
 	mvtHandler := mvt.NewMVTHandler(mvtService)
 
+	geoJSONService := geojson.NewGeoJSONService(db)
+	geoJSONHandler := geojson.NewGeoJSONHandler(geoJSONService)
+
 	reportService := report.NewReportService(db) 
 	reportHandler := report.NewReportHandler(reportService)
 
@@ -64,6 +68,7 @@ func main() {
 	r.GET("/articles", articleHandler.GetArticles)
 	r.GET("/articles/:id", articleHandler.GetArticle)
 	r.GET("/mvt/:table_name/:z/:x/:y", mvtHandler.GetMVT)
+	r.GET("/geojson/:table_name", geoJSONHandler.GetGeoJSON)
 	r.GET("/layer-groups", layerGroupHandler.GetGroupsWithLayers)
 	r.GET("/layers", layerHandler.GetFormattedLayers)
 	r.POST("/reports", reportHandler.CreateReport)

@@ -188,7 +188,7 @@ func (s *Service) queryFormattedLayers(query string, args ...interface{}) ([]For
 			"id": tableName,
 			"source": map[string]interface{}{
 				"type":  "vector",
-				"tiles": fmt.Sprintf("http://localhost:8080/mvt/%s/{z}/{x}/{y}", tableName),
+				"tiles": fmt.Sprintf("http://localhost:8080/geojson/%s", tableName),
 			},
 			"source-layer": tableName,
 			"type":         layerType,
