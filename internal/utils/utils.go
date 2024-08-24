@@ -77,3 +77,64 @@ func GetPaint(dataType, color string) map[string]interface{} {
         }
     }
 }
+
+func InferPostgresType(value interface{}) string {
+    switch value.(type) {
+    case float64:
+        return "DOUBLE PRECISION"
+    case bool:
+        return "BOOLEAN"
+    default:
+        return "TEXT"
+    }
+}
+
+func ReconcileTypes(existingType, newType string) string {
+    if existingType == newType {
+        return existingType
+    }
+    if (existingType == "INTEGER" && newType == "DOUBLE PRECISION") ||
+       (existingType == "DOUBLE PRECISION" && newType == "INTEGER") {
+        return "DOUBLE PRECISION"
+    }
+    if existingType == "TEXT" || newType == "TEXT" {
+        return "TEXT"
+    }
+    return "TEXT"
+}
+
+func ConvertToType(value interface{}, targetType string) (interface{}, error) {
+    switch targetType {
+    case "INTEGER":
+        switch v := value.(type) {
+        case float64:
+            return int64(v), nil
+        case string:
+            return strconv.ParseInt(v, 10, 64)
+        default:
+            return nil, fmt.Errorf("cannot convert %v to INTEGER", value)
+        }
+    case "DOUBLE PRECISION":
+        switch v := value.(type) {
+        case float64:
+            return v, nil
+        case string:
+            return strconv.ParseFloat(v, 64)
+        default:
+            return nil, fmt.Errorf("cannot convert %v to DOUBLE PRECISION", value)
+        }
+    case "BOOLEAN":
+        switch v := value.(type) {
+        case bool:
+            return v, nil
+        case string:
+            return strconv.ParseBool(v)
+        default:
+            return nil, fmt.Errorf("cannot convert %v to BOOLEAN", value)
+        }
+    case "TEXT":
+        return fmt.Sprintf("%v", value), nil
+    default:
+        return nil, fmt.Errorf("unknown target type: %s", targetType)
+    }
+}

@@ -2,6 +2,7 @@ package geojson
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -22,18 +23,26 @@ func (s *GeoJSONService) GenerateGeoJSON(tableName string) ([]byte, error) {
 				json_build_object(
 					'type', 'Feature',
 					'geometry', ST_AsGeoJSON(geom)::json,
-					'properties', properties
+					'properties', json_build_object(
+						'wadmkc', wadmkc,
+						'wadmkk', wadmkk,
+						'wadmpr', wadmpr
+					)
 				)
 			)
 		)::text
 		FROM %s;
 	`, tableName)
 
+	log.Printf("Executing query: %s", query)
+
 	var geojson []byte
 	err := s.db.Get(&geojson, query)
 	if err != nil {
+		log.Printf("Error executing query: %v", err)
 		return nil, err
 	}
 
+	log.Printf("Successfully generated GeoJSON for table: %s", tableName)
 	return geojson, nil
 }

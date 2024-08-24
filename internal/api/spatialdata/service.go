@@ -9,6 +9,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/paulmach/orb/encoding/wkb"
 	"github.com/paulmach/orb/geojson"
+	"github.com/samdyra/go-geo/internal/utils"
 	"github.com/samdyra/go-geo/internal/utils/errors"
 )
 
@@ -19,7 +20,6 @@ type SpatialDataService struct {
 func NewSpatialDataService(db *sqlx.DB) *SpatialDataService {
     return &SpatialDataService{db: db}
 }
-
 func (s *SpatialDataService) CreateSpatialData(spatial_data SpatialDataCreate, file io.Reader, username string) error {
     var exists bool
     err := s.db.QueryRow("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)", spatial_data.TableName).Scan(&exists)
@@ -46,21 +46,6 @@ func (s *SpatialDataService) CreateSpatialData(spatial_data SpatialDataCreate, f
         return errors.ErrInternalServer
     }
 
-    _, err = tx.Exec(fmt.Sprintf(`
-    CREATE TABLE IF NOT EXISTS %s (
-        id SERIAL PRIMARY KEY,
-        geom GEOMETRY,
-        properties JSONB,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        created_by VARCHAR(255),
-        updated_by VARCHAR(255)
-    )
-    `, spatial_data.TableName))
-    if err != nil {
-        return errors.ErrInternalServer
-    }
-
     fileBytes, err := io.ReadAll(file)
     if err != nil {
         return errors.ErrInvalidInput
@@ -71,22 +56,71 @@ func (s *SpatialDataService) CreateSpatialData(spatial_data SpatialDataCreate, f
         return errors.ErrInvalidInput
     }
 
+    propertyTypes := make(map[string]string)
+    for _, feature := range fc.Features {
+        for key, value := range feature.Properties {
+            inferredType := utils.InferPostgresType(value)
+            if existingType, ok := propertyTypes[key]; ok {
+                propertyTypes[key] = utils.ReconcileTypes(existingType, inferredType)
+            } else {
+                propertyTypes[key] = inferredType
+            }
+        }
+    }
+
+    createTableSQL := fmt.Sprintf(`
+    CREATE TABLE IF NOT EXISTS %s (
+        id SERIAL PRIMARY KEY,
+        geom GEOMETRY,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        created_by VARCHAR(255),
+        updated_by VARCHAR(255)`, spatial_data.TableName)
+
+    for propName, propType := range propertyTypes {
+        createTableSQL += fmt.Sprintf(",\n        %s %s", propName, propType)
+    }
+    createTableSQL += "\n    )"
+
+    _, err = tx.Exec(createTableSQL)
+    if err != nil {
+        return errors.ErrInternalServer
+    }
+
+    insertSQL := fmt.Sprintf("INSERT INTO %s (geom, created_by, updated_by", spatial_data.TableName)
+    valueSQL := ") VALUES (ST_GeomFromWKB($1, 4326), $2, $3"
+    paramCount := 4
+
+    propertyNames := make([]string, 0, len(propertyTypes))
+    for propName := range propertyTypes {
+        propertyNames = append(propertyNames, propName)
+        insertSQL += fmt.Sprintf(", %s", propName)
+        valueSQL += fmt.Sprintf(", $%d", paramCount)
+        paramCount++
+    }
+    insertSQL += valueSQL + ")"
+
     for _, feature := range fc.Features {
         geom := feature.Geometry
-        properties, err := json.Marshal(feature.Properties)
-        if err != nil {
-            return errors.ErrInternalServer
-        }
-
         wkbData, err := wkb.Marshal(geom)
         if err != nil {
             return errors.ErrInternalServer
         }
 
-        _, err = tx.Exec(fmt.Sprintf(`
-            INSERT INTO %s (geom, properties, created_by, updated_by)
-            VALUES (ST_GeomFromWKB($1, 4326), $2, $3, $4)
-        `, spatial_data.TableName), wkbData, properties, username, username)
+        params := []interface{}{wkbData, username, username}
+        for _, propName := range propertyNames {
+            if val, ok := feature.Properties[propName]; ok {
+                convertedVal, err := utils.ConvertToType(val, propertyTypes[propName])
+                if err != nil {
+                    return errors.ErrInvalidInput
+                }
+                params = append(params, convertedVal)
+            } else {
+                params = append(params, nil)
+            }
+        }
+
+        _, err = tx.Exec(insertSQL, params...)
         if err != nil {
             return errors.ErrInternalServer
         }
@@ -94,6 +128,8 @@ func (s *SpatialDataService) CreateSpatialData(spatial_data SpatialDataCreate, f
 
     return tx.Commit()
 }
+
+
 
 func (s *SpatialDataService) GetSpatialDataList() ([]SpatialData, error) {
     query := `SELECT id, table_name, type, created_at, updated_at, created_by, updated_by FROM spatial_data`
