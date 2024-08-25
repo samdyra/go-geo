@@ -21,13 +21,26 @@ func NewSpatialDataService(db *sqlx.DB) *SpatialDataService {
     return &SpatialDataService{db: db}
 }
 func (s *SpatialDataService) CreateSpatialData(spatial_data SpatialDataCreate, file io.Reader, username string) error {
-    var exists bool
-    err := s.db.QueryRow("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)", spatial_data.TableName).Scan(&exists)
+    var existsInSchema, existsInSpatialData bool
+
+    // Check in information_schema.tables
+    err := s.db.QueryRow("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)", spatial_data.TableName).Scan(&existsInSchema)
     if err != nil {
-        return errors.ErrInternalServer
+        return fmt.Errorf("error checking schema: %w", errors.ErrInternalServer)
     }
-    if exists {
-        return errors.ErrTableAlreadyExists
+
+    // Check in spatial_data table
+    err = s.db.QueryRow("SELECT EXISTS (SELECT FROM spatial_data WHERE table_name = $1)", spatial_data.TableName).Scan(&existsInSpatialData)
+    if err != nil {
+        return fmt.Errorf("error checking spatial_data: %w", errors.ErrInternalServer)
+    }
+
+    if existsInSchema {
+        return errors.ErrResourceAlreadyExists
+    }
+
+    if existsInSpatialData {
+        return errors.ErrResourceAlreadyExists
     }
     
     tx, err := s.db.Beginx()
